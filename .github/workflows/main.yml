@@ -7,6 +7,7 @@ on:
       - main
       - feat/*
       - beta-*
+      - wip-*
 
   workflow_dispatch:
 

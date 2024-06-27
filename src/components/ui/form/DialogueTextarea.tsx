@@ -75,7 +75,10 @@ const DialogueTextareaWrapper = styled.div<DialogueTextareaWrapperProps>`
   }
 
   .MentionsInput__input {
-    color: transparent;
+    background: white !important;
+    color: black !important;
+    position: static !important;
+    margin-left: -5px !important;
     border: 1px solid ${(props) => props.theme.colors.input.border};
     font-size: ${(props) => props.theme.typography.fontSize};
     border-radius: 4px;
