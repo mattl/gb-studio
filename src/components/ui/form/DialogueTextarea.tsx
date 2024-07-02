@@ -80,7 +80,15 @@ const DialogueTextareaWrapper = styled.div<DialogueTextareaWrapperProps>`
     position: static !important;
     margin-left: -5px !important;
     border: 1px solid ${(props) => props.theme.colors.input.border};
-    font-size: ${(props) => props.theme.typography.fontSize};
+    font-size: ${(props) => props.theme.typography.fontSize} !important;
+    font-family: monospace !important;
+    font-stretch: 100% !important;
+    font-style: normal !important;
+    font-variant-caps: normal !important;
+    font-variant-east-asian: normal !important;
+    font-variant-ligatures: normal !important;
+    font-variant-numeric: normal !important;
+    font-weight: 700 !important;
     border-radius: 4px;
     box-sizing: border-box;
     width: 100%;
