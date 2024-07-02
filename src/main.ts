@@ -148,7 +148,8 @@ let debuggerInitData: DebuggerInitData | null = null;
 let stopWatchingFn: (() => void) | null = null;
 let scriptEventHandlers: ScriptEventHandlers = {};
 
-const isDevMode = !!process.execPath.match(/[\\/]electron/);
+// const isDevMode = !!process.execPath.match(/[\\/]electron/);
+const isDevMode = true;
 
 const validProjectExt = [".json", ".gbsproj"];
 

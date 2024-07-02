@@ -13,7 +13,8 @@ import { locales } from "lib/lang/initElectronL10N";
 
 declare const COMMITHASH: string;
 
-const isDevMode = process.execPath.match(/[\\/]electron/);
+// const isDevMode = process.execPath.match(/[\\/]electron/);
+const isDevMode = true;
 
 let menu: Menu;
 
