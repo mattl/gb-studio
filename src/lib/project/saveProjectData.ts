@@ -1,12 +1,23 @@
-import { ensureDir } from "fs-extra";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { copy, ensureDir, move, pathExists, remove } from "fs-extra";
+import glob from "glob";
+import { promisify } from "util";
+import { writeFileAndFlushAsync } from "lib/helpers/fs/writeFileAndFlush";
 import { writeFileWithBackupAsync } from "lib/helpers/fs/writeFileWithBackup";
 import Path from "path";
+import {
+  actorName,
+  customEventName,
+  paletteName,
+  sceneName,
+  triggerName,
+} from "shared/lib/entities/entitiesHelpers";
 import { stripInvalidPathCharacters } from "shared/lib/helpers/stripInvalidFilenameCharacters";
 import type { ProjectData } from "store/features/project/projectActions";
 
-// @TODO
-// Need to write (only the scenes marked dirty or missing)
-// And only delete ones that weren't found in project?
+const globAsync = promisify(glob);
+
+type Entity = { id: string; name: string };
 
 const stringify8bitArray = (arr: number[], _width: number): string => {
   return stringify8bitArrayCompressed(arr, Infinity);
@@ -15,9 +26,35 @@ const stringify8bitArray = (arr: number[], _width: number): string => {
   //   .join("\n");
 };
 
-const encodeResource = <T>(data: T): string => {
-  return JSON.stringify(data, null, 4);
-  // return YAML.stringify(data, { blockQuote: "literal" });
+const encodeResource = <T extends Record<string, unknown>>(
+  resourceType: string,
+  data: T
+): string => {
+  const {
+    // Extract id so it can be moved to top of data
+    id,
+    // Remove internal data so it isn't stored to disk
+    __dirty,
+    __type,
+    // Extract remaining data to write to disk
+    ...rest
+  } = data;
+  return JSON.stringify(
+    {
+      _resourceType: resourceType,
+      id,
+      ...rest,
+    },
+    null,
+    2
+  );
+};
+
+const entityToFilePath = (entity: Entity, nameOverride?: string): string => {
+  const name = nameOverride || entity.name;
+  return `${stripInvalidPathCharacters(name)
+    .toLocaleLowerCase()
+    .replace(/\s+/g, "_")}__${entity.id}`;
 };
 
 const stringify8bitArrayCompressed = (arr: number[], width: number): string => {
@@ -61,93 +98,108 @@ const stringify8bitArrayCompressed = (arr: number[], width: number): string => {
 const saveProjectData = async (projectPath: string, project: ProjectData) => {
   const projectFolder = Path.dirname(projectPath);
   const projectPartsFolder = Path.join(projectFolder, "project");
+  const projectPartsTmpFolder = Path.join(projectFolder, "project.sav");
+  const projectPartsBckFolder = Path.join(projectFolder, "project.bak");
   const projectResFilename = Path.join(projectFolder, `project.gbsres`);
-
+  const variablesResFilename = Path.join(`variables.gbsres`);
+  const settingsResFilename = Path.join(`settings.gbsres`);
+  const userSettingsResFilename = Path.join(`user_settings.gbsres`);
+  const engineFieldValuesResFilename = Path.join(`engine_field_values.gbsres`);
   // await rmdir(projectFolder);
-  const scenesFolder = Path.join(projectPartsFolder, "scenes");
-  const backgroundsFolder = Path.join(projectPartsFolder, "backgrounds");
-  const spritesFolder = Path.join(projectPartsFolder, "sprites");
-  const palettesFolder = Path.join(projectPartsFolder, "palettes");
-  const scriptsFolder = Path.join(projectPartsFolder, "scripts");
-  const musicFolder = Path.join(projectPartsFolder, "music");
-  const soundsFolder = Path.join(projectPartsFolder, "sounds");
-  const emotesFolder = Path.join(projectPartsFolder, "emotes");
-  const avatarsFolder = Path.join(projectPartsFolder, "avatars");
-  const tilesetsFolder = Path.join(projectPartsFolder, "tilesets");
-  const fontsFolder = Path.join(projectPartsFolder, "fonts");
+  const scenesFolder = Path.join("scenes");
+  const backgroundsFolder = Path.join("backgrounds");
+  const spritesFolder = Path.join("sprites");
+  const palettesFolder = Path.join("palettes");
+  const scriptsFolder = Path.join("scripts");
+  const musicFolder = Path.join("music");
+  const soundsFolder = Path.join("sounds");
+  const emotesFolder = Path.join("emotes");
+  const avatarsFolder = Path.join("avatars");
+  const tilesetsFolder = Path.join("tilesets");
+  const fontsFolder = Path.join("fonts");
 
-  await ensureDir(scenesFolder);
-  await ensureDir(backgroundsFolder);
-  await ensureDir(spritesFolder);
-  await ensureDir(palettesFolder);
-  await ensureDir(scriptsFolder);
-  await ensureDir(musicFolder);
-  await ensureDir(soundsFolder);
-  await ensureDir(emotesFolder);
-  await ensureDir(avatarsFolder);
-  await ensureDir(tilesetsFolder);
-  await ensureDir(fontsFolder);
+  const existingPath = Path.join(projectPartsFolder, "**/*.gbsres");
+  const existingResourcePaths = new Set(
+    (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
+      (path) => Path.relative(projectPartsFolder, path)
+    )
+  );
+  const newResourcePaths: Set<string> = new Set();
+
+  let forceWrite = true;
+  if (await pathExists(projectPartsFolder)) {
+    await copy(projectPartsFolder, projectPartsBckFolder);
+    await copy(projectPartsFolder, projectPartsTmpFolder);
+    forceWrite = false;
+  }
+
+  const writeResource = async <T extends Record<string, unknown>>(
+    filename: string,
+    resourceType: string,
+    resource: T
+  ) => {
+    newResourcePaths.add(filename);
+    if (
+      forceWrite ||
+      resource.__dirty ||
+      !existingResourcePaths.has(filename)
+    ) {
+      const filePath = Path.join(projectPartsTmpFolder, filename);
+      await ensureDir(Path.dirname(filePath));
+      await writeFileAndFlushAsync(
+        filePath,
+        encodeResource(resourceType, resource)
+      );
+    }
+  };
 
   let sceneIndex = 0;
   for (const scene of project.scenes) {
     const sceneFolder = Path.join(
       scenesFolder,
-      `${stripInvalidPathCharacters(scene.name)}-${sceneIndex}`
+      `${entityToFilePath(scene, sceneName(scene, sceneIndex))}`
     );
     const actorsFolder = Path.join(sceneFolder, "actors");
     const triggersFolder = Path.join(sceneFolder, "triggers");
-
-    await ensureDir(sceneFolder);
-
     const sceneFilename = Path.join(sceneFolder, `scene.gbsres`);
-    await ensureDir(Path.dirname(sceneFilename));
 
     if (scene.actors.length > 0) {
       let actorIndex = 0;
-      await ensureDir(actorsFolder);
       for (const actor of scene.actors) {
         const actorFilename = Path.join(
           actorsFolder,
-          `${actor.name}-${actorIndex}.gbsres`
+          `${entityToFilePath(actor, actorName(actor, actorIndex))}.gbsres`
         );
-        await ensureDir(Path.dirname(actorFilename));
-        await writeFileWithBackupAsync(
-          actorFilename,
-          encodeResource({ _resourceType: "actor", ...actor })
-        );
+        await writeResource(actorFilename, "actor", actor);
         actorIndex++;
       }
     }
 
     if (scene.triggers.length > 0) {
       let triggerIndex = 0;
-      await ensureDir(triggersFolder);
       for (const trigger of scene.triggers) {
         const triggerFilename = Path.join(
           triggersFolder,
-          `${trigger.name}-${triggerIndex}.gbsres`
+          `${entityToFilePath(
+            trigger,
+            triggerName(trigger, triggerIndex)
+          )}.gbsres`
         );
-        await ensureDir(Path.dirname(triggerFilename));
-        await writeFileWithBackupAsync(
-          triggerFilename,
-          encodeResource({ _resourceType: "trigger", trigger })
-        );
+        await writeResource(triggerFilename, "trigger", trigger);
         triggerIndex++;
       }
     }
 
-    await writeFileWithBackupAsync(
-      sceneFilename,
-      encodeResource({
-        _resourceType: "scene",
-        ...scene,
-        actors: scene.actors.map((e) => e.id),
-        triggers: scene.triggers.map((e) => e.id),
-        collisions: stringify8bitArray(scene.collisions, scene.width),
-        // tileColors: stringify8bitArray(scene.tileColors, scene.width)
-        tileColors: undefined,
-      })
-    );
+    await writeResource(sceneFilename, "scene", {
+      ...scene,
+      // actors: scene.actors.map((e) => e.id),
+      // triggers: scene.triggers.map((e) => e.id),
+      actors: undefined,
+      triggers: undefined,
+      collisions: stringify8bitArray(scene.collisions, scene.width),
+      // tileColors: stringify8bitArray(scene.tileColors, scene.width)
+      tileColors: undefined,
+    });
     sceneIndex++;
   }
 
@@ -155,17 +207,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const background of project.backgrounds) {
     const backgroundFilename = Path.join(
       backgroundsFolder,
-      `${stripInvalidPathCharacters(background.name)}-${backgroundIndex}.gbsres`
+      `${entityToFilePath(background)}.gbsres`
     );
-    await ensureDir(Path.dirname(backgroundFilename));
-    await writeFileWithBackupAsync(
-      backgroundFilename,
-      encodeResource({
-        _resourceType: "background",
-        ...background,
-        tileColors: stringify8bitArray(background.tileColors, background.width),
-      })
-    );
+    await writeResource(backgroundFilename, "background", {
+      ...background,
+      tileColors: stringify8bitArray(background.tileColors, background.width),
+    });
     backgroundIndex++;
   }
 
@@ -173,16 +220,11 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const sprite of project.spriteSheets) {
     const spriteFilename = Path.join(
       spritesFolder,
-      `${stripInvalidPathCharacters(sprite.name)}-${spriteIndex}.gbsres`
+      `${entityToFilePath(sprite)}.gbsres`
     );
-    await ensureDir(Path.dirname(spriteFilename));
-    await writeFileWithBackupAsync(
-      spriteFilename,
-      encodeResource({
-        _resourceType: "sprite",
-        ...sprite,
-      })
-    );
+    await writeResource(spriteFilename, "sprite", {
+      ...sprite,
+    });
     spriteIndex++;
   }
 
@@ -190,16 +232,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const palette of project.palettes) {
     const paletteFilename = Path.join(
       palettesFolder,
-      `${stripInvalidPathCharacters(palette.name)}-${paletteIndex}.gbsres`
+      `${entityToFilePath(palette, paletteName(palette, paletteIndex))}.gbsres`
     );
-    await ensureDir(Path.dirname(paletteFilename));
-    await writeFileWithBackupAsync(
-      paletteFilename,
-      encodeResource({
-        _resourceType: "palette",
-        ...palette,
-      })
-    );
+    await writeResource(paletteFilename, "palette", {
+      ...palette,
+    });
+
     paletteIndex++;
   }
 
@@ -207,16 +245,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const script of project.customEvents) {
     const scriptFilename = Path.join(
       scriptsFolder,
-      `${stripInvalidPathCharacters(script.name)}-${scriptIndex}.gbsres`
+      `${entityToFilePath(script, customEventName(script, scriptIndex))}.gbsres`
     );
-    await ensureDir(Path.dirname(scriptFilename));
-    await writeFileWithBackupAsync(
-      scriptFilename,
-      encodeResource({
-        _resourceType: "script",
-        ...script,
-      })
-    );
+    await writeResource(scriptFilename, "script", {
+      ...script,
+    });
+
     scriptIndex++;
   }
 
@@ -224,16 +258,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const song of project.music) {
     const songFilename = Path.join(
       musicFolder,
-      `${stripInvalidPathCharacters(song.name)}-${songIndex}.gbsres`
+      `${entityToFilePath(song)}.gbsres`
     );
-    await ensureDir(Path.dirname(songFilename));
-    await writeFileWithBackupAsync(
-      songFilename,
-      encodeResource({
-        _resourceType: "music",
-        ...song,
-      })
-    );
+    await writeResource(songFilename, "music", {
+      ...song,
+    });
+
     songIndex++;
   }
 
@@ -241,16 +271,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const sound of project.sounds) {
     const soundFilename = Path.join(
       soundsFolder,
-      `${stripInvalidPathCharacters(sound.name)}-${soundIndex}.gbsres`
+      `${entityToFilePath(sound)}.gbsres`
     );
-    await ensureDir(Path.dirname(soundFilename));
-    await writeFileWithBackupAsync(
-      soundFilename,
-      encodeResource({
-        _resourceType: "sound",
-        ...sound,
-      })
-    );
+    await writeResource(soundFilename, "sound", {
+      ...sound,
+    });
+
     soundIndex++;
   }
 
@@ -258,16 +284,11 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const emote of project.emotes) {
     const emoteFilename = Path.join(
       emotesFolder,
-      `${stripInvalidPathCharacters(emote.name)}-${emoteIndex}.gbsres`
+      `${entityToFilePath(emote)}.gbsres`
     );
-    await ensureDir(Path.dirname(emoteFilename));
-    await writeFileWithBackupAsync(
-      emoteFilename,
-      encodeResource({
-        _resourceType: "emote",
-        ...emote,
-      })
-    );
+    await writeResource(emoteFilename, "emote", {
+      ...emote,
+    });
     emoteIndex++;
   }
 
@@ -275,16 +296,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const avatar of project.avatars) {
     const avatarFilename = Path.join(
       avatarsFolder,
-      `${stripInvalidPathCharacters(avatar.name)}-${avatarIndex}.gbsres`
+      `${entityToFilePath(avatar)}.gbsres`
     );
-    await ensureDir(Path.dirname(avatarFilename));
-    await writeFileWithBackupAsync(
-      avatarFilename,
-      encodeResource({
-        _resourceType: "avatar",
-        ...avatar,
-      })
-    );
+    await writeResource(avatarFilename, "avatar", {
+      ...avatar,
+    });
+
     avatarIndex++;
   }
 
@@ -292,16 +309,12 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const tileset of project.tilesets) {
     const tilesetFilename = Path.join(
       tilesetsFolder,
-      `${stripInvalidPathCharacters(tileset.name)}-${tilesetIndex}.gbsres`
+      `${entityToFilePath(tileset)}.gbsres`
     );
-    await ensureDir(Path.dirname(tilesetFilename));
-    await writeFileWithBackupAsync(
-      tilesetFilename,
-      encodeResource({
-        _resourceType: "tileset",
-        ...tileset,
-      })
-    );
+    await writeResource(tilesetFilename, "tileset", {
+      ...tileset,
+    });
+
     tilesetIndex++;
   }
 
@@ -309,39 +322,71 @@ const saveProjectData = async (projectPath: string, project: ProjectData) => {
   for (const font of project.fonts) {
     const fontFilename = Path.join(
       fontsFolder,
-      `${stripInvalidPathCharacters(font.name)}-${fontIndex}.gbsres`
+      `${entityToFilePath(font)}.gbsres`
     );
-    await ensureDir(Path.dirname(fontFilename));
-    await writeFileWithBackupAsync(
-      fontFilename,
-      encodeResource({
-        _resourceType: "font",
-        ...font,
-      })
-    );
+    await writeResource(fontFilename, "font", {
+      ...font,
+    });
+
     fontIndex++;
   }
 
-  await writeFileWithBackupAsync(projectPath, JSON.stringify(project, null, 4));
+  await writeResource(settingsResFilename, "settings", {
+    ...project.settings,
+    worldScrollX: undefined,
+    worldScrollY: undefined,
+    zoom: undefined,
+  });
+
+  await writeResource(userSettingsResFilename, "settings", {
+    worldScrollX: project.settings.worldScrollX,
+    worldScrollY: project.settings.worldScrollY,
+    zoom: project.settings.zoom,
+  });
+
+  await writeResource(variablesResFilename, "variables", {
+    ...project.variables,
+  });
+
+  await writeResource(engineFieldValuesResFilename, "engineFieldValues", {
+    ...project.engineFieldValues,
+  });
 
   await writeFileWithBackupAsync(
     projectResFilename,
-    encodeResource({
-      _resourceType: "project",
+    encodeResource("project", {
       ...project,
-      scenes: project.scenes.map((e) => e.id),
-      backgrounds: project.backgrounds.map((e) => e.id),
-      spriteSheets: project.spriteSheets.map((e) => e.id),
-      palettes: project.palettes.map((e) => e.id),
-      customEvents: project.customEvents.map((e) => e.id),
-      music: project.music.map((e) => e.id),
-      sounds: project.sounds.map((e) => e.id),
-      emotes: project.emotes.map((e) => e.id),
-      avatars: project.avatars.map((e) => e.id),
-      fonts: project.fonts.map((e) => e.id),
-      tilesets: project.tilesets.map((e) => e.id),
+      scenes: undefined,
+      backgrounds: undefined,
+      spriteSheets: undefined,
+      palettes: undefined,
+      customEvents: undefined,
+      music: undefined,
+      sounds: undefined,
+      emotes: undefined,
+      avatars: undefined,
+      fonts: undefined,
+      tilesets: undefined,
+      variables: undefined,
+      engineFieldValues: undefined,
+      settings: undefined,
     })
   );
+
+  const resourceDiff = Array.from(existingResourcePaths).filter(
+    (path) => !newResourcePaths.has(path)
+  );
+
+  // Remove previous project files that are no longer needed
+  for (const path of resourceDiff) {
+    const removePath = Path.join(projectPartsTmpFolder, path);
+    await remove(removePath);
+  }
+
+  await move(projectPartsTmpFolder, projectPartsFolder, { overwrite: true });
+
+  // Keep original save for now too
+  await writeFileWithBackupAsync(projectPath, JSON.stringify(project, null, 4));
 };
 
 export default saveProjectData;
