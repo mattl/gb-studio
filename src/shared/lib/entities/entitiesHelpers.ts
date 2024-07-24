@@ -18,7 +18,6 @@ import {
   Avatar,
   Emote,
   CustomEventNormalized,
-  CustomEvent,
   Variable,
   EngineFieldValue,
   UnionValue,
@@ -105,6 +104,8 @@ export type NormalizedData = NormalizedSchema<
   NormalizedEntities,
   NormalizedResult
 >;
+
+type NamedEntity = { name: string };
 
 const inodeToAssetCache: Dictionary<Asset> = {};
 
@@ -407,23 +408,20 @@ export const isCustomEventEqual = (
   );
 };
 
-export const actorName = (actor: ActorNormalized, actorIndex: number) => {
+export const actorName = (actor: NamedEntity, actorIndex: number) => {
   return actor.name || defaultLocalisedActorName(actorIndex);
 };
 
-export const triggerName = (
-  trigger: TriggerNormalized,
-  triggerIndex: number
-) => {
+export const triggerName = (trigger: NamedEntity, triggerIndex: number) => {
   return trigger.name || defaultLocalisedTriggerName(triggerIndex);
 };
 
-export const sceneName = (scene: SceneNormalized, sceneIndex: number) => {
+export const sceneName = (scene: NamedEntity, sceneIndex: number) => {
   return scene.name || defaultLocalisedSceneName(sceneIndex);
 };
 
 export const customEventName = (
-  customEvent: CustomEventNormalized | CustomEvent,
+  customEvent: NamedEntity,
   customEventIndex: number
 ) => {
   return customEvent.name || defaultLocalisedCustomEventName(customEventIndex);
