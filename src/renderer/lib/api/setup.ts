@@ -43,6 +43,7 @@ import type { SceneMapData, VariableMapData } from "lib/compiler/compileData";
 import type { TilesetAssetData } from "lib/project/loadTilesetData";
 import type { Asset, AssetType } from "shared/lib/helpers/assets";
 import type { Patrons } from "scripts/fetchPatrons";
+import type { LoadProjectResult } from "lib/project/loadProjectData";
 
 interface L10NLookup {
   [key: string]: string | boolean | undefined;
@@ -232,14 +233,8 @@ const APISetup = {
       ),
     addFile: (filename: string): Promise<void> =>
       ipcRenderer.invoke("project:add-file", filename),
-    loadProject: (): Promise<{
-      data: ProjectData;
-      scriptEventDefs: ScriptEventDefs;
-      engineFields: EngineFieldSchema[];
-      sceneTypes: SceneTypeSchema[];
-      modifiedSpriteIds: string[];
-      isMigrated: boolean;
-    }> => ipcRenderer.invoke("project:load"),
+    loadProject: (): Promise<LoadProjectResult> =>
+      ipcRenderer.invoke("project:load"),
     saveProject: (data: ProjectData): Promise<void> =>
       ipcRenderer.invoke("project:save", data),
     setModified: () => ipcRenderer.invoke("project:set-modified"),

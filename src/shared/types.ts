@@ -1,5 +1,9 @@
 export type JsonValue = string | number | boolean | null;
 
+declare const __brand: unique symbol;
+type Brand<B> = { [__brand]: B };
+export type Branded<T, B> = T & Brand<B>;
+
 /* KeysMatching<T, V>
  *
  * Find all keys in T which have the type V

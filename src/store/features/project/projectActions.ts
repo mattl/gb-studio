@@ -1,4 +1,4 @@
-import { createAsyncThunk, createAction, Dictionary } from "@reduxjs/toolkit";
+import { createAsyncThunk, createAction } from "@reduxjs/toolkit";
 import {
   EntitiesState,
   ProjectEntitiesData,
@@ -11,17 +11,13 @@ import {
   SoundData,
   TilesetData,
 } from "shared/lib/entities/entitiesTypes";
-import type { ScriptEventDef } from "lib/project/loadScriptEventHandlers";
 import type { RootState } from "store/configureStore";
 import { SettingsState } from "store/features/settings/settingsState";
 import { MetadataState } from "store/features/metadata/metadataState";
 import { denormalizeEntities } from "shared/lib/entities/entitiesHelpers";
 import API from "renderer/lib/api";
-import {
-  EngineFieldSchema,
-  SceneTypeSchema,
-} from "store/features/engine/engineState";
 import { Asset, AssetType } from "shared/lib/helpers/assets";
+import type { LoadProjectResult } from "lib/project/loadProjectData";
 
 let saving = false;
 
@@ -124,33 +120,19 @@ const openProject = createAction<string>("project/openProject");
 const closeProject = createAction<void>("project/closeProject");
 
 const loadProject = createAsyncThunk<
-  {
-    data: ProjectData;
-    path: string;
-    scriptEventDefs: Dictionary<ScriptEventDef>;
-    engineFields: EngineFieldSchema[];
-    sceneTypes: SceneTypeSchema[];
-    modifiedSpriteIds: string[];
-    isMigrated: boolean;
-  },
+  LoadProjectResult & { path: string },
   string
 >("project/loadProject", async (path) => {
-  const {
-    data,
-    scriptEventDefs,
-    engineFields,
-    sceneTypes,
-    modifiedSpriteIds,
-    isMigrated,
-  } = await API.project.loadProject();
+  console.log("CALL API LOAD PROJECT", new Date().valueOf());
+  console.time("projectActions.loadProject");
+  const data = await API.project.loadProject();
+  console.timeEnd("projectActions.loadProject");
+  // throw new Error("CANCEL LOAD");
+  // console.log({ resources });
+  console.log("loadProject action", { data });
   return {
-    data,
+    ...data,
     path,
-    scriptEventDefs,
-    engineFields,
-    sceneTypes,
-    modifiedSpriteIds,
-    isMigrated,
   };
 });
 

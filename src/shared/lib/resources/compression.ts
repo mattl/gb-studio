@@ -1,0 +1,74 @@
+import {
+  CompressedProjectResources,
+  ProjectResources,
+} from "shared/lib/resources/types";
+
+export const compress8bitNumberArray = (arr: number[]): string => {
+  let lastValue = -1;
+  let output = "";
+  let count = 0;
+
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] !== lastValue) {
+      if (count === 1) {
+        output += "!";
+      } else if (count > 0) {
+        output += `${count.toString(16)}+`;
+      }
+      count = 0;
+      lastValue = arr[i];
+      output += (lastValue % 256).toString(16).padStart(2, "0");
+    }
+    count++;
+  }
+  if (count === 1) {
+    output += "!";
+  } else if (count > 0) {
+    output += `${count.toString(16)}+`;
+  }
+
+  return output;
+};
+
+export const decompress8bitNumberString = (str: string): number[] => {
+  const arr: number[] = [];
+  let i = 0;
+  while (i < str.length) {
+    // Read the value
+    const value = parseInt(str.slice(i, i + 2), 16);
+    i += 2;
+    let count = 1;
+    if (i < str.length) {
+      if (str[i] === "!") {
+        // Single occurrence
+        count = 1;
+        i++;
+      } else {
+        // Read the count
+        const countStart = i;
+        const countEnd = str.indexOf("+", countStart);
+        count = parseInt(str.slice(countStart, countEnd), 16);
+        i = countEnd + 1;
+      }
+    }
+    // Add the value `count` times to the array
+    for (let j = 0; j < count; j++) {
+      arr.push(value);
+    }
+  }
+  return arr;
+};
+
+export const decompressProjectResources = (
+  compressedResources: CompressedProjectResources
+): ProjectResources => {
+  return {
+    ...compressedResources,
+    scenes: compressedResources.scenes.map((scene) => {
+      return {
+        ...scene,
+        collisions: decompress8bitNumberString(scene.collisions),
+      };
+    }),
+  };
+};

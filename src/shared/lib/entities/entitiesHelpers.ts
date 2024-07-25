@@ -60,6 +60,7 @@ import {
 } from "shared/lib/scriptValue/helpers";
 import { ScriptValue, isScriptValue } from "shared/lib/scriptValue/types";
 import { sortByKey } from "shared/lib/helpers/sortByKey";
+import { ProjectResources } from "shared/lib/resources/types";
 
 export interface NormalizedEntities {
   scenes: Record<EntityId, SceneNormalized>;
@@ -149,8 +150,8 @@ const spriteSheetsSchema = new schema.Entity("spriteSheets", {
 
 const variablesSchema = new schema.Entity("variables");
 const sceneSchema = new schema.Entity("scenes", {
-  actors: [actorSchema],
-  triggers: [triggerSchema],
+  // actors: [actorSchema],
+  // triggers: [triggerSchema],
   script: [scriptEventSchema],
   playerHit1Script: [scriptEventSchema],
   playerHit2Script: [scriptEventSchema],
@@ -178,13 +179,37 @@ const projectSchema = {
   engineFieldValues: [engineFieldValuesSchema],
 };
 
+const resourcesSchema = {
+  scenes: [sceneSchema],
+  actors: [actorSchema],
+  triggers: [triggerSchema],
+  backgrounds: [backgroundSchema],
+  music: [musicSchema],
+  sounds: [soundSchema],
+  fonts: [fontSchema],
+  avatars: [avatarSchema],
+  emotes: [emoteSchema],
+  tilesets: [tilesetSchema],
+  spriteSheets: [spriteSheetsSchema],
+  variables: [variablesSchema],
+  customEvents: [customEventsSchema],
+  palettes: [palettesSchema],
+  engineFieldValues: [engineFieldValuesSchema],
+};
+
 export const normalizeEntities = (
   projectData: ProjectEntitiesData
 ): NormalizedData => {
   return normalize<NormalizedEntities, NormalizedResult>(
     projectData,
     projectSchema
-  );
+  ) as unknown as NormalizedData;
+};
+
+export const normalizeEntityResources = (
+  projectResources: ProjectResources
+): NormalizedData => {
+  return normalize(projectResources, resourcesSchema);
 };
 
 export const denormalizeEntities = (

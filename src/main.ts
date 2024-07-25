@@ -1194,7 +1194,10 @@ ipcMain.handle("project:load", async (): Promise<{
   modifiedSpriteIds: string[];
   isMigrated: boolean;
 }> => {
-  return loadProjectData(projectPath);
+  console.time("handle project:load");
+  const data = await loadProjectData(projectPath);
+  console.timeEnd("handle project:load");
+  return data;
 });
 
 ipcMain.handle("project:save", async (_, data: ProjectData): Promise<void> => {

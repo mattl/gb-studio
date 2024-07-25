@@ -1,6 +1,8 @@
 import fs from "fs-extra";
 import path from "path";
 import uuid from "uuid/v4";
+import glob from "glob";
+import { promisify } from "util";
 import loadAllBackgroundData from "./loadBackgroundData";
 import loadAllSpriteData from "./loadSpriteData";
 import loadAllMusicData from "./loadMusicData";
@@ -19,11 +21,26 @@ import type {
 } from "store/features/engine/engineState";
 import type { Asset } from "shared/lib/helpers/assets";
 import keyBy from "lodash/keyBy";
+import groupBy from "lodash/groupBy";
 import { cloneDictionary } from "lib/helpers/clone";
 import { Dictionary } from "@reduxjs/toolkit";
 import { loadEngineFields } from "lib/project/engineFields";
 import { loadSceneTypes } from "lib/project/sceneTypes";
 import loadAllTilesetData from "lib/project/loadTilesetData";
+import promiseLimit from "lib/helpers/promiseLimit";
+import { CompressedProjectResources } from "shared/lib/resources/types";
+
+export interface LoadProjectResult {
+  data: ProjectData;
+  resources: CompressedProjectResources;
+  scriptEventDefs: Dictionary<ScriptEventDef>;
+  engineFields: EngineFieldSchema[];
+  sceneTypes: SceneTypeSchema[];
+  modifiedSpriteIds: string[];
+  isMigrated: boolean;
+}
+
+const globAsync = promisify(glob);
 
 const toUnixFilename = (filename: string) => {
   return filename.replace(/\\/g, "/");
@@ -48,35 +65,76 @@ const sortByName = (a: { name: string }, b: { name: string }) => {
   return 0;
 };
 
-const loadProject = async (
-  projectPath: string
-): Promise<{
-  data: ProjectData;
-  scriptEventDefs: Dictionary<ScriptEventDef>;
-  engineFields: EngineFieldSchema[];
-  sceneTypes: SceneTypeSchema[];
-  modifiedSpriteIds: string[];
-  isMigrated: boolean;
-}> => {
+const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const projectRoot = path.dirname(projectPath);
 
-  const scriptEventDefs = await loadAllScriptEventHandlers(projectRoot);
-  const engineFields = await loadEngineFields(projectRoot);
-  const sceneTypes = await loadSceneTypes(projectRoot);
+  console.time("loadProjectData.loadProject globResources");
+  const projectResources = await globAsync(
+    path.join(projectRoot, "project", "**/*.gbsres")
+  );
+  console.timeEnd("loadProjectData.loadProject globResources");
 
+  // console.time("loadProjectData.loadProject readResources");
+  // for (const projectResourcePath of projectResources) {
+  //   const resourceJson = await fs.readJson(projectResourcePath);
+  // }
+  // console.timeEnd("loadProjectData.loadProject readResources");
+
+  console.time("loadProjectData.loadProject readResources2");
+  const resources = await promiseLimit(
+    8,
+    projectResources.map((projectResourcePath) => async () => {
+      const resourceData = await fs.readJson(projectResourcePath);
+      return {
+        path: projectResourcePath,
+        type: resourceData._resourceType,
+        data: resourceData,
+      };
+    })
+  );
+  console.timeEnd("loadProjectData.loadProject readResources2");
+
+  console.log("resources.length === ", resources.length);
+  console.time("loadProjectData.loadProject build resourcesLookup");
+  const resourcesLookup = groupBy(resources, "type");
+  console.timeEnd("loadProjectData.loadProject build resourcesLookup");
+
+  console.log(resourcesLookup);
+
+  // console.log(resources);
+
+  // console.log({ projectResources });
+
+  console.time("loadProjectData.loadProject scriptEventDefs");
+  const scriptEventDefs = await loadAllScriptEventHandlers(projectRoot);
+  console.timeEnd("loadProjectData.loadProject scriptEventDefs");
+
+  console.time("loadProjectData.loadProject engineFields");
+  const engineFields = await loadEngineFields(projectRoot);
+  console.timeEnd("loadProjectData.loadProject engineFields");
+
+  console.time("loadProjectData.loadProject sceneTypes");
+  const sceneTypes = await loadSceneTypes(projectRoot);
+  console.timeEnd("loadProjectData.loadProject sceneTypes");
+
+  console.time("loadProjectData.loadProject readJson");
   const originalJson = await fs.readJson(projectPath);
+  console.timeEnd("loadProjectData.loadProject readJson");
 
   const { _version: originalVersion, _release: originalRelease } = originalJson;
 
+  console.time("loadProjectData.loadProject migrateProject");
   const json = migrateProject(
     originalJson,
     projectRoot,
     scriptEventDefs
   ) as ProjectData;
+  console.timeEnd("loadProjectData.loadProject migrateProject");
 
   const isMigrated =
     json._version !== originalVersion || json._release !== originalRelease;
 
+  console.time("loadProjectData.loadProject loadAssets");
   const [
     backgrounds,
     sprites,
@@ -96,6 +154,9 @@ const loadProject = async (
     loadAllEmoteData(projectRoot),
     loadAllTilesetData(projectRoot),
   ]);
+  console.timeEnd("loadProjectData.loadProject loadAssets");
+
+  console.time("loadProjectData.loadProject fixBackgrounds");
 
   // Merge stored backgrounds data with file system data
   const oldBackgroundByFilename = indexByFilename(json.backgrounds || []);
@@ -128,6 +189,9 @@ const loadProject = async (
       };
     })
     .sort(sortByName);
+  console.timeEnd("loadProjectData.loadProject fixBackgrounds");
+
+  console.time("loadProjectData.loadProject fixSprites");
 
   // Merge stored sprite data with file system data
   const oldSpriteByFilename = indexByFilename(json.spriteSheets || []);
@@ -185,6 +249,10 @@ const loadProject = async (
     })
     .sort(sortByName);
 
+  console.timeEnd("loadProjectData.loadProject fixSprites");
+
+  console.time("loadProjectData.loadProject fixMusic");
+
   // Merge stored music data with file system data
   const oldMusicByFilename = indexByFilename(json.music || []);
 
@@ -206,6 +274,10 @@ const loadProject = async (
     })
     .sort(sortByName);
 
+  console.timeEnd("loadProjectData.loadProject fixMusic");
+
+  console.time("loadProjectData.loadProject fixSounds");
+
   // Merge stored sound effect data with file system data
   const oldSoundByFilename = indexByFilename(json.sounds || []);
 
@@ -224,6 +296,9 @@ const loadProject = async (
     })
     .sort(sortByName);
 
+  console.timeEnd("loadProjectData.loadProject fixSounds");
+  console.time("loadProjectData.loadProject fixFonts");
+
   // Merge stored fonts data with file system data
   const oldFontByFilename = indexByFilename(json.fonts || []);
 
@@ -240,6 +315,9 @@ const loadProject = async (
       return font;
     })
     .sort(sortByName);
+  console.timeEnd("loadProjectData.loadProject fixFonts");
+
+  console.time("loadProjectData.loadProject fixAvatars");
 
   // Merge stored avatars data with file system data
   const oldAvatarByFilename = indexByFilename(json.avatars || []);
@@ -256,6 +334,9 @@ const loadProject = async (
       return avatar;
     })
     .sort(sortByName);
+  console.timeEnd("loadProjectData.loadProject fixAvatars");
+
+  console.time("loadProjectData.loadProject fixEmotes");
 
   // Merge stored emotes data with file system data
   const oldEmoteByFilename = indexByFilename(json.emotes || []);
@@ -274,6 +355,9 @@ const loadProject = async (
       return emote;
     })
     .sort(sortByName);
+  console.timeEnd("loadProjectData.loadProject fixEmotes");
+
+  console.time("loadProjectData.loadProject fixTilesets");
 
   // Merge stored tilesets data with file system data
   const oldTilesetByFilename = indexByFilename(json.tilesets || []);
@@ -294,6 +378,7 @@ const loadProject = async (
       return tileset;
     })
     .sort(sortByName);
+  console.timeEnd("loadProjectData.loadProject fixTilesets");
 
   const addMissingEntityId = <T extends { id: string }>(entity: T) => {
     if (!entity.id) {
@@ -305,6 +390,8 @@ const loadProject = async (
     return entity;
   };
 
+  console.time("loadProjectData.loadProject fixScenes");
+
   // Fix ids on actors and triggers
   const fixedScenes = (json.scenes || []).map((scene) => {
     return {
@@ -313,8 +400,14 @@ const loadProject = async (
       triggers: scene.triggers.map(addMissingEntityId),
     };
   });
+  console.timeEnd("loadProjectData.loadProject fixScenes");
+
+  console.time("loadProjectData.loadProject fixCustomEvents");
 
   const fixedCustomEvents = (json.customEvents || []).map(addMissingEntityId);
+  console.timeEnd("loadProjectData.loadProject fixCustomEvents");
+
+  console.time("loadProjectData.loadProject fixPalettes");
 
   const defaultPalettes = [
     {
@@ -381,8 +474,55 @@ const loadProject = async (
       });
     }
   }
+  console.timeEnd("loadProjectData.loadProject fixPalettes");
+
+  console.time("loadProjectData.loadProject fixEngineFieldValues");
 
   const fixedEngineFieldValues = json.engineFieldValues || [];
+  console.timeEnd("loadProjectData.loadProject fixEngineFieldValues");
+
+  console.log("ACTORS", resourcesLookup.actor);
+
+  //   console.log(
+  //     "ACTORS MAPPED",
+  //     (resourcesLookup.actor ?? []).map((row) => addMissingEntityId({
+  //       ...row.data,
+  //       actors: (resourcesLookup.actor ?? [])
+  // }))
+  //   );
+
+  const sceneResources = (resourcesLookup.scene ?? []).map((row) => {
+    const sceneDir = path.dirname(row.path);
+    const actorsDir = path.join(sceneDir, "actors");
+    const triggersDir = path.join(sceneDir, "triggers");
+    return addMissingEntityId({
+      ...row.data,
+      actors: (resourcesLookup.actor ?? [])
+        .filter((actorRow) => {
+          const relative = path.relative(actorsDir, actorRow.path);
+          return (
+            relative && !relative.startsWith("..") && !path.isAbsolute(relative)
+          );
+        })
+        .map((actorRow) => actorRow.data.id),
+      triggers: (resourcesLookup.trigger ?? [])
+        .filter((triggerRow) => {
+          const relative = path.relative(triggersDir, triggerRow.path);
+          return (
+            relative && !relative.startsWith("..") && !path.isAbsolute(relative)
+          );
+        })
+        .map((triggerRow) => triggerRow.data.id),
+    });
+  });
+
+  const actorResources = (resourcesLookup.actor ?? []).map((row) =>
+    addMissingEntityId(row.data)
+  );
+
+  const triggerResources = (resourcesLookup.trigger ?? []).map((row) =>
+    addMissingEntityId(row.data)
+  );
 
   return {
     data: {
@@ -399,6 +539,11 @@ const loadProject = async (
       customEvents: fixedCustomEvents,
       palettes: fixedPalettes,
       engineFieldValues: fixedEngineFieldValues,
+    },
+    resources: {
+      scenes: sceneResources,
+      actors: actorResources,
+      triggers: triggerResources,
     },
     modifiedSpriteIds,
     isMigrated,

@@ -55,7 +55,6 @@ import {
   Variable,
   CustomEventNormalized,
   ScriptEventNormalized,
-  ProjectEntitiesData,
   MusicSettings,
   EngineFieldValue,
   Metasprite,
@@ -87,6 +86,7 @@ import {
   moveArrayElement,
   updateCustomEventArgs,
   updateAllCustomEventsArgs,
+  normalizeEntityResources,
 } from "shared/lib/entities/entitiesHelpers";
 import spriteActions from "store/features/sprite/spriteActions";
 import { isValueNumber } from "shared/lib/scriptValue/types";
@@ -95,6 +95,8 @@ import { monoOverrideForFilename } from "shared/lib/assets/backgrounds";
 import { Asset, AssetType } from "shared/lib/helpers/assets";
 import { assertUnreachable } from "shared/lib/scriptValue/format";
 import { addNewSongFile } from "store/features/trackerDocument/trackerDocumentState";
+import type { LoadProjectResult } from "lib/project/loadProjectData";
+import { decompressProjectResources } from "shared/lib/resources/compression";
 
 const MIN_SCENE_X = 60;
 const MIN_SCENE_Y = 30;
@@ -242,20 +244,44 @@ const first = <T>(array: T[]): T | undefined => {
 
 const loadProject: CaseReducer<
   EntitiesState,
-  PayloadAction<{
-    data: ProjectEntitiesData;
-    scriptEventDefs: ScriptEventDefs;
-  }>
+  PayloadAction<LoadProjectResult>
 > = (state, action) => {
+  console.log("ENTITIES HANDLE LOAD PROJECT START", new Date().valueOf());
+  console.time("entitiesState.loadProject");
+
+  console.time("entitiesState.loadProject normalizeEntities");
   const data = normalizeEntities(action.payload.data);
+  console.timeEnd("entitiesState.loadProject normalizeEntities");
+
+  console.time("entitiesState.loadProject uncompressResources");
+  const uncompressedResources = decompressProjectResources(
+    action.payload.resources
+  );
+  console.timeEnd("entitiesState.loadProject uncompressResources");
+
+  console.time("entitiesState.loadProject normalizeEntityResources");
+
+  const data2 = normalizeEntityResources(uncompressedResources);
+
+  console.log({ data2 });
+  console.timeEnd("entitiesState.loadProject normalizeEntityResources");
+
   const entities = data.entities;
-  actorsAdapter.setAll(state.actors, entities.actors || {});
-  triggersAdapter.setAll(state.triggers, entities.triggers || {});
-  scenesAdapter.setAll(state.scenes, entities.scenes || {});
-  scriptEventsAdapter.setAll(state.scriptEvents, entities.scriptEvents || {});
+  console.time("entitiesState.loadProject setA");
+
+  actorsAdapter.setAll(state.actors, data2.entities.actors || {});
+  triggersAdapter.setAll(state.triggers, data2.entities.triggers || {});
+  scenesAdapter.setAll(state.scenes, data2.entities.scenes || {});
+  scriptEventsAdapter.setAll(
+    state.scriptEvents,
+    data2.entities.scriptEvents || {}
+  );
   backgroundsAdapter.setAll(state.backgrounds, entities.backgrounds || {});
   spriteSheetsAdapter.setAll(state.spriteSheets, entities.spriteSheets || {});
   metaspritesAdapter.setAll(state.metasprites, entities.metasprites || {});
+  console.timeEnd("entitiesState.loadProject setA");
+  console.time("entitiesState.loadProject setB");
+
   metaspriteTilesAdapter.setAll(
     state.metaspriteTiles,
     entities.metaspriteTiles || {}
@@ -269,6 +295,9 @@ const loadProject: CaseReducer<
   musicAdapter.setAll(state.music, entities.music || {});
   soundsAdapter.setAll(state.sounds, entities.sounds || {});
   fontsAdapter.setAll(state.fonts, entities.fonts || {});
+  console.timeEnd("entitiesState.loadProject setB");
+  console.time("entitiesState.loadProject setC");
+
   avatarsAdapter.setAll(state.avatars, entities.avatars || {});
   emotesAdapter.setAll(state.emotes, entities.emotes || {});
   tilesetsAdapter.setAll(state.tilesets, entities.tilesets || {});
@@ -278,14 +307,33 @@ const loadProject: CaseReducer<
     state.engineFieldValues,
     entities.engineFieldValues || {}
   );
+  console.timeEnd("entitiesState.loadProject setC");
+
+  console.time("entitiesState.loadProject fixAllScenesWithModifiedBackgrounds");
   fixAllScenesWithModifiedBackgrounds(state);
+  console.timeEnd(
+    "entitiesState.loadProject fixAllScenesWithModifiedBackgrounds"
+  );
+
+  console.time("entitiesState.loadProject updateMonoOverrideIds");
   updateMonoOverrideIds(state);
+  console.timeEnd("entitiesState.loadProject updateMonoOverrideIds");
+
+  console.time("entitiesState.loadProject ensureSymbolsUnique");
   ensureSymbolsUnique(state);
+  console.timeEnd("entitiesState.loadProject ensureSymbolsUnique");
+
+  console.time("entitiesState.loadProject updateAllCustomEventsArgs");
   updateAllCustomEventsArgs(
     Object.values(state.customEvents.entities) as CustomEventNormalized[],
     state.scriptEvents.entities,
     action.payload.scriptEventDefs
   );
+  console.timeEnd("entitiesState.loadProject updateAllCustomEventsArgs");
+
+  console.timeEnd("entitiesState.loadProject");
+
+  console.log("ENTITIES HANDLE LOAD PROJECT END", new Date().valueOf());
 };
 
 const loadBackground: CaseReducer<
