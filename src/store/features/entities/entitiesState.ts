@@ -294,16 +294,16 @@ const loadProject: CaseReducer<
     entities.spriteAnimations || {}
   );
   spriteStatesAdapter.setAll(state.spriteStates, entities.spriteStates || {});
-  palettesAdapter.setAll(state.palettes, entities.palettes || {});
-  musicAdapter.setAll(state.music, entities.music || {});
-  soundsAdapter.setAll(state.sounds, entities.sounds || {});
-  fontsAdapter.setAll(state.fonts, entities.fonts || {});
+  palettesAdapter.setAll(state.palettes, data2.entities.palettes || {});
+  musicAdapter.setAll(state.music, data2.entities.music || {});
+  soundsAdapter.setAll(state.sounds, data2.entities.sounds || {});
+  fontsAdapter.setAll(state.fonts, data2.entities.fonts || {});
   console.timeEnd("entitiesState.loadProject setB");
   console.time("entitiesState.loadProject setC");
 
-  avatarsAdapter.setAll(state.avatars, entities.avatars || {});
-  emotesAdapter.setAll(state.emotes, entities.emotes || {});
-  tilesetsAdapter.setAll(state.tilesets, entities.tilesets || {});
+  avatarsAdapter.setAll(state.avatars, data2.entities.avatars || {});
+  emotesAdapter.setAll(state.emotes, data2.entities.emotes || {});
+  tilesetsAdapter.setAll(state.tilesets, data2.entities.tilesets || {});
   customEventsAdapter.setAll(state.customEvents, data2.entities.scripts || {});
   variablesAdapter.setAll(state.variables, data2.entities.variables || {});
   engineFieldValuesAdapter.setAll(

@@ -1,11 +1,19 @@
 import type {
   Actor,
+  AvatarData,
   Background,
   CustomEvent,
+  EmoteData,
+  FontData,
+  MusicData,
+  Palette,
   Scene,
+  SoundData,
+  Tileset,
   Trigger,
   Variable,
 } from "shared/lib/entities/entitiesTypes";
+import { SettingsState } from "store/features/settings/settingsState";
 
 // type ProjectResourceType = "scene" | "actor" | "trigger";
 
@@ -53,6 +61,38 @@ export type BackgroundResource = Omit<
   tileColors: number[];
 };
 
+export type TilesetResource = Tileset & {
+  _resourceType: "tileset";
+};
+
+export type EmoteResource = EmoteData & {
+  _resourceType: "emote";
+};
+
+export type AvatarResource = AvatarData & {
+  _resourceType: "avatar";
+};
+
+export type FontResource = FontData & {
+  _resourceType: "font";
+};
+
+export type SoundResource = SoundData & {
+  _resourceType: "sound";
+};
+
+export type MusicResource = MusicData & {
+  _resourceType: "music";
+};
+
+export type PaletteResource = Palette & {
+  _resourceType: "palette";
+};
+
+export type SettingsResource = SettingsState & {
+  _resourceType: "settings";
+};
+
 export type VariablesResource = {
   _resourceType: "variables";
   variables: Variable[];
@@ -64,7 +104,15 @@ export type CompressedProjectResources = {
   triggers: TriggerResource[];
   scripts: ScriptResource[];
   backgrounds: CompressedBackgroundResource[];
+  emotes: EmoteResource[];
+  avatars: AvatarResource[];
+  fonts: FontResource[];
+  tilesets: TilesetResource[];
+  sounds: SoundResource[];
+  music: MusicResource[];
+  palettes: PaletteResource[];
   variables: VariablesResource;
+  // settings: SettingsResource;
 };
 
 export type ProjectResources = Omit<

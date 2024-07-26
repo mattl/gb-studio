@@ -3,9 +3,11 @@ import path from "path";
 import uuid from "uuid/v4";
 import glob from "glob";
 import { promisify } from "util";
-import loadAllBackgroundData from "./loadBackgroundData";
+import loadAllBackgroundData, {
+  BackgroundAssetData,
+} from "./loadBackgroundData";
 import loadAllSpriteData from "./loadSpriteData";
-import loadAllMusicData from "./loadMusicData";
+import loadAllMusicData, { MusicAssetData } from "./loadMusicData";
 import loadAllFontData from "./loadFontData";
 import loadAllAvatarData from "./loadAvatarData";
 import loadAllEmoteData from "./loadEmoteData";
@@ -31,8 +33,11 @@ import promiseLimit from "lib/helpers/promiseLimit";
 import {
   CompressedBackgroundResource,
   CompressedProjectResources,
+  MusicResource,
+  PaletteResource,
   VariablesResource,
 } from "shared/lib/resources/types";
+import { Palette } from "shared/lib/entities/entitiesTypes";
 
 export interface LoadProjectResult {
   data: ProjectData;
@@ -536,40 +541,199 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     addMissingEntityId(row.data)
   );
 
-  const oldBackgroundResourceByFilename = indexResourceByFilename(
-    resourcesLookup.background || []
-  );
+  const mergeAssetsWithResources = <
+    R extends Asset & { name: string },
+    A extends Asset
+  >(
+    assets: A[],
+    resources: {
+      path: string;
+      type: string;
+      data: R;
+    }[],
+    mergeFn: (asset: A, resource: R) => R,
+    newFn: (asset: A) => R
+  ) => {
+    const oldResourceByFilename = indexResourceByFilename(resources || []);
+    return assets
+      .map((asset) => {
+        const oldResource: R =
+          oldResourceByFilename[toAssetFilename(asset)]?.data;
+        if (oldResource) {
+          return mergeFn(asset, oldResource);
+        }
+        return newFn(asset);
+      })
+      .sort(sortByName);
+  };
 
-  const backgroundResources: CompressedBackgroundResource[] = backgrounds.map(
-    (background) => {
-      const oldBackground: CompressedBackgroundResource =
-        oldBackgroundResourceByFilename[toAssetFilename(background)]?.data;
-      if (oldBackground) {
+  const mergeAssetIdsWithResources = <
+    A extends Asset & { id: string; name: string },
+    B extends string
+  >(
+    assets: A[],
+    resources: {
+      path: string;
+      type: string;
+      data: A & { _resourceType: B };
+    }[],
+    resourceType: B
+  ) => {
+    return mergeAssetsWithResources(
+      assets,
+      resources,
+      (asset, resource) => {
         return {
-          _resourceType: "background",
-          ...background,
-          id: oldBackground.id,
-          symbol:
-            oldBackground?.symbol !== undefined
-              ? oldBackground.symbol
-              : background.symbol,
-          tileColors:
-            oldBackground?.tileColors !== undefined
-              ? oldBackground.tileColors
-              : "",
-          autoColor:
-            oldBackground?.autoColor !== undefined
-              ? oldBackground.autoColor
-              : false,
+          _resourceType: resourceType,
+          ...asset,
+          id: resource.id,
+        };
+      },
+      (asset) => {
+        return {
+          _resourceType: resourceType,
+          ...asset,
         };
       }
+    );
+  };
+
+  const mergeAssetIdAndSymbolsWithResources = <
+    A extends Asset & { id: string; symbol: string; name: string },
+    B extends string
+  >(
+    assets: A[],
+    resources: {
+      path: string;
+      type: string;
+      data: A & { _resourceType: B };
+    }[],
+    resourceType: B
+  ) => {
+    return mergeAssetsWithResources(
+      assets,
+      resources,
+      (asset, resource) => {
+        return {
+          _resourceType: resourceType,
+          ...asset,
+          id: resource.id,
+          symbol:
+            resource?.symbol !== undefined ? resource.symbol : asset.symbol,
+        };
+      },
+      (asset) => {
+        return {
+          _resourceType: resourceType,
+          ...asset,
+        };
+      }
+    );
+  };
+
+  const backgroundResources = mergeAssetsWithResources<
+    CompressedBackgroundResource,
+    BackgroundAssetData
+  >(
+    backgrounds,
+    resourcesLookup.background,
+    (asset, resource) => {
       return {
         _resourceType: "background",
-        ...background,
+        ...asset,
+        id: resource.id,
+        symbol: resource?.symbol !== undefined ? resource.symbol : asset.symbol,
+        tileColors:
+          resource?.tileColors !== undefined ? resource.tileColors : "",
+        autoColor:
+          resource?.autoColor !== undefined ? resource.autoColor : false,
+      };
+    },
+    (asset) => {
+      return {
+        _resourceType: "background",
+        ...asset,
         tileColors: "",
       };
     }
   );
+
+  const emoteResources = mergeAssetIdAndSymbolsWithResources(
+    emotes,
+    resourcesLookup.emote,
+    "emote"
+  );
+
+  const avatarResources = mergeAssetIdsWithResources(
+    avatars,
+    resourcesLookup.avatar,
+    "avatar"
+  );
+
+  const tilesetResources = mergeAssetIdAndSymbolsWithResources(
+    tilesets,
+    resourcesLookup.tileset,
+    "tileset"
+  );
+
+  const soundResources = mergeAssetIdAndSymbolsWithResources(
+    sounds,
+    resourcesLookup.sound,
+    "sound"
+  );
+
+  const fontResources = mergeAssetIdAndSymbolsWithResources(
+    fonts,
+    resourcesLookup.font,
+    "font"
+  );
+
+  const musicResources = mergeAssetsWithResources<
+    MusicResource,
+    MusicAssetData
+  >(
+    music,
+    resourcesLookup.music,
+    (asset, resource) => {
+      return {
+        _resourceType: "music",
+        ...asset,
+        id: resource.id,
+        symbol: resource?.symbol !== undefined ? resource.symbol : asset.symbol,
+        settings: {
+          ...resource.settings,
+        },
+      };
+    },
+    (asset) => ({
+      _resourceType: "music",
+      ...asset,
+      settings: {},
+    })
+  );
+
+  const paletteResources: PaletteResource[] = (
+    resourcesLookup.palette ?? []
+  ).map((row) => addMissingEntityId(row.data));
+
+  // Add any missing default palettes
+  for (let i = 0; i < defaultPalettes.length; i++) {
+    const defaultPalette = defaultPalettes[i];
+    const existingPalette = fixedPalettes.find(
+      (p) => p.id === defaultPalette.id
+    );
+    if (existingPalette) {
+      existingPalette.defaultName = defaultPalette.name;
+      existingPalette.defaultColors = defaultPalette.colors;
+    } else {
+      paletteResources.push({
+        _resourceType: "palette",
+        ...defaultPalette,
+        defaultName: defaultPalette.name,
+        defaultColors: defaultPalette.colors,
+      });
+    }
+  }
 
   const variableResource: VariablesResource = (resourcesLookup.variables ??
     [])[0].data;
@@ -596,6 +760,13 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       triggers: triggerResources,
       scripts: scriptResources,
       backgrounds: backgroundResources,
+      emotes: emoteResources,
+      avatars: avatarResources,
+      tilesets: tilesetResources,
+      fonts: fontResources,
+      sounds: soundResources,
+      music: musicResources,
+      palettes: paletteResources,
       variables: variableResource,
     },
     modifiedSpriteIds,
