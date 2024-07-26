@@ -28,7 +28,11 @@ import { loadEngineFields } from "lib/project/engineFields";
 import { loadSceneTypes } from "lib/project/sceneTypes";
 import loadAllTilesetData from "lib/project/loadTilesetData";
 import promiseLimit from "lib/helpers/promiseLimit";
-import { CompressedProjectResources } from "shared/lib/resources/types";
+import {
+  CompressedBackgroundResource,
+  CompressedProjectResources,
+  VariablesResource,
+} from "shared/lib/resources/types";
 
 export interface LoadProjectResult {
   data: ProjectData;
@@ -52,6 +56,10 @@ const toAssetFilename = (elem: Asset) => {
 
 const indexByFilename = <T extends Asset>(arr: T[]): Record<string, T> =>
   keyBy(arr || [], toAssetFilename);
+
+const indexResourceByFilename = <T extends { data: Asset }>(
+  arr: T[]
+): Record<string, T> => keyBy(arr || [], ({ data }) => toAssetFilename(data));
 
 const sortByName = (a: { name: string }, b: { name: string }) => {
   const aName = a.name.toUpperCase();
@@ -524,6 +532,48 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     addMissingEntityId(row.data)
   );
 
+  const scriptResources = (resourcesLookup.script ?? []).map((row) =>
+    addMissingEntityId(row.data)
+  );
+
+  const oldBackgroundResourceByFilename = indexResourceByFilename(
+    resourcesLookup.background || []
+  );
+
+  const backgroundResources: CompressedBackgroundResource[] = backgrounds.map(
+    (background) => {
+      const oldBackground: CompressedBackgroundResource =
+        oldBackgroundResourceByFilename[toAssetFilename(background)]?.data;
+      if (oldBackground) {
+        return {
+          _resourceType: "background",
+          ...background,
+          id: oldBackground.id,
+          symbol:
+            oldBackground?.symbol !== undefined
+              ? oldBackground.symbol
+              : background.symbol,
+          tileColors:
+            oldBackground?.tileColors !== undefined
+              ? oldBackground.tileColors
+              : "",
+          autoColor:
+            oldBackground?.autoColor !== undefined
+              ? oldBackground.autoColor
+              : false,
+        };
+      }
+      return {
+        _resourceType: "background",
+        ...background,
+        tileColors: "",
+      };
+    }
+  );
+
+  const variableResource: VariablesResource = (resourcesLookup.variables ??
+    [])[0].data;
+
   return {
     data: {
       ...json,
@@ -544,6 +594,9 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       scenes: sceneResources,
       actors: actorResources,
       triggers: triggerResources,
+      scripts: scriptResources,
+      backgrounds: backgroundResources,
+      variables: variableResource,
     },
     modifiedSpriteIds,
     isMigrated,

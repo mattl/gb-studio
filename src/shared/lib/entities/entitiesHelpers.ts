@@ -85,6 +85,29 @@ export interface NormalizedEntities {
   engineFieldValues: Record<EntityId, EngineFieldValue>;
 }
 
+export interface NormalizedEntities2 {
+  scenes: Record<EntityId, SceneNormalized>;
+  actors: Record<EntityId, ActorNormalized>;
+  triggers: Record<EntityId, TriggerNormalized>;
+  scriptEvents: Record<EntityId, ScriptEventNormalized>;
+  backgrounds: Record<EntityId, Background>;
+  spriteSheets: Record<EntityId, SpriteSheet>;
+  metasprites: Record<EntityId, Metasprite>;
+  metaspriteTiles: Record<EntityId, MetaspriteTile>;
+  spriteAnimations: Record<EntityId, SpriteAnimation>;
+  spriteStates: Record<EntityId, SpriteState>;
+  palettes: Record<EntityId, Palette>;
+  music: Record<EntityId, Music>;
+  sounds: Record<EntityId, Sound>;
+  fonts: Record<EntityId, Font>;
+  avatars: Record<EntityId, Avatar>;
+  emotes: Record<EntityId, Emote>;
+  tilesets: Record<EntityId, Tileset>;
+  scripts: Record<EntityId, CustomEventNormalized>;
+  variables: Record<EntityId, Variable>;
+  engineFieldValues: Record<EntityId, EngineFieldValue>;
+}
+
 export interface NormalizedResult {
   scenes: EntityId[];
   backgrounds: EntityId[];
@@ -101,9 +124,30 @@ export interface NormalizedResult {
   engineFieldValues: EntityId[];
 }
 
+export interface NormalizedResult2 {
+  scenes: EntityId[];
+  backgrounds: EntityId[];
+  spriteSheets: EntityId[];
+  palettes: EntityId[];
+  scripts: EntityId[];
+  music: EntityId[];
+  sounds: EntityId[];
+  fonts: EntityId[];
+  avatars: EntityId[];
+  emotes: EntityId[];
+  tilesets: EntityId[];
+  variables: EntityId[];
+  engineFieldValues: EntityId[];
+}
+
 export type NormalizedData = NormalizedSchema<
   NormalizedEntities,
   NormalizedResult
+>;
+
+export type NormalizedData2 = NormalizedSchema<
+  NormalizedEntities2,
+  NormalizedResult2
 >;
 
 type NamedEntity = { name: string };
@@ -160,6 +204,9 @@ const sceneSchema = new schema.Entity("scenes", {
 const customEventsSchema = new schema.Entity("customEvents", {
   script: [scriptEventSchema],
 });
+const scriptsSchema = new schema.Entity("scripts", {
+  script: [scriptEventSchema],
+});
 const palettesSchema = new schema.Entity("palettes");
 const engineFieldValuesSchema = new schema.Entity("engineFieldValues");
 
@@ -192,7 +239,7 @@ const resourcesSchema = {
   tilesets: [tilesetSchema],
   spriteSheets: [spriteSheetsSchema],
   variables: [variablesSchema],
-  customEvents: [customEventsSchema],
+  scripts: [scriptsSchema],
   palettes: [palettesSchema],
   engineFieldValues: [engineFieldValuesSchema],
 };
@@ -208,7 +255,7 @@ export const normalizeEntities = (
 
 export const normalizeEntityResources = (
   projectResources: ProjectResources
-): NormalizedData => {
+): NormalizedData2 => {
   return normalize(projectResources, resourcesSchema);
 };
 

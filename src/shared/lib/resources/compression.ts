@@ -1,6 +1,10 @@
 import {
+  BackgroundResource,
+  CompressedBackgroundResource,
   CompressedProjectResources,
+  CompressedSceneResourceWithChildren,
   ProjectResources,
+  SceneResource,
 } from "shared/lib/resources/types";
 
 export const compress8bitNumberArray = (arr: number[]): string => {
@@ -59,16 +63,32 @@ export const decompress8bitNumberString = (str: string): number[] => {
   return arr;
 };
 
+const decompressSceneResource = (
+  scene: CompressedSceneResourceWithChildren
+): SceneResource => {
+  return {
+    ...scene,
+    collisions: decompress8bitNumberString(scene.collisions),
+  };
+};
+
+const decompressBackgroundResource = (
+  background: CompressedBackgroundResource
+): BackgroundResource => {
+  return {
+    ...background,
+    tileColors: decompress8bitNumberString(background.tileColors),
+  };
+};
+
 export const decompressProjectResources = (
   compressedResources: CompressedProjectResources
 ): ProjectResources => {
   return {
     ...compressedResources,
-    scenes: compressedResources.scenes.map((scene) => {
-      return {
-        ...scene,
-        collisions: decompress8bitNumberString(scene.collisions),
-      };
-    }),
+    scenes: compressedResources.scenes.map(decompressSceneResource),
+    backgrounds: compressedResources.backgrounds.map(
+      decompressBackgroundResource
+    ),
   };
 };

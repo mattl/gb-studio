@@ -276,7 +276,10 @@ const loadProject: CaseReducer<
     state.scriptEvents,
     data2.entities.scriptEvents || {}
   );
-  backgroundsAdapter.setAll(state.backgrounds, entities.backgrounds || {});
+  backgroundsAdapter.setAll(
+    state.backgrounds,
+    data2.entities.backgrounds || {}
+  );
   spriteSheetsAdapter.setAll(state.spriteSheets, entities.spriteSheets || {});
   metaspritesAdapter.setAll(state.metasprites, entities.metasprites || {});
   console.timeEnd("entitiesState.loadProject setA");
@@ -301,8 +304,8 @@ const loadProject: CaseReducer<
   avatarsAdapter.setAll(state.avatars, entities.avatars || {});
   emotesAdapter.setAll(state.emotes, entities.emotes || {});
   tilesetsAdapter.setAll(state.tilesets, entities.tilesets || {});
-  customEventsAdapter.setAll(state.customEvents, entities.customEvents || {});
-  variablesAdapter.setAll(state.variables, entities.variables || {});
+  customEventsAdapter.setAll(state.customEvents, data2.entities.scripts || {});
+  variablesAdapter.setAll(state.variables, data2.entities.variables || {});
   engineFieldValuesAdapter.setAll(
     state.engineFieldValues,
     entities.engineFieldValues || {}

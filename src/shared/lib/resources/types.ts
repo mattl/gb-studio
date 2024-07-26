@@ -1,37 +1,21 @@
-import {
-  ActorDirection,
-  SceneParallaxLayer,
-  ScriptEvent,
+import type {
+  Actor,
+  Background,
+  CustomEvent,
+  Scene,
+  Trigger,
+  Variable,
 } from "shared/lib/entities/entitiesTypes";
 
 // type ProjectResourceType = "scene" | "actor" | "trigger";
 
-export interface CompressedSceneResource {
+export type CompressedSceneResource = Omit<
+  Scene,
+  "collisions" | "actors" | "triggers"
+> & {
   _resourceType: "scene";
-  id: string;
-  type: string;
-  name: string;
-  symbol: string;
-  notes?: string;
-  labelColor?: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  backgroundId: string;
-  tilesetId: string;
-  paletteIds: string[];
-  spritePaletteIds: string[];
   collisions: string;
-  autoFadeSpeed: number | null;
-  autoFadeEventCollapse?: boolean;
-  parallax?: SceneParallaxLayer[];
-  playerSpriteSheetId?: string;
-  script: ScriptEvent[];
-  playerHit1Script: ScriptEvent[];
-  playerHit2Script: ScriptEvent[];
-  playerHit3Script: ScriptEvent[];
-}
+};
 
 export type CompressedSceneResourceWithChildren = CompressedSceneResource & {
   actors: string[];
@@ -45,52 +29,48 @@ export type SceneResource = Omit<
   collisions: number[];
 };
 
-export interface ActorResource {
+export type ActorResource = Actor & {
   _resourceType: "actor";
-  id: string;
-  name: string;
-  symbol: string;
-  notes?: string;
-  x: number;
-  y: number;
-  spriteSheetId: string;
-  paletteId: string;
-  frame: number;
-  moveSpeed: number;
-  animSpeed: number | null;
-  direction: ActorDirection;
-  animate: boolean;
-  isPinned: boolean;
-  persistent: boolean;
-  collisionGroup: string;
-  script: ScriptEvent[];
-  startScript: ScriptEvent[];
-  updateScript: ScriptEvent[];
-  hit1Script: ScriptEvent[];
-  hit2Script: ScriptEvent[];
-  hit3Script: ScriptEvent[];
-}
+};
 
-export type TriggerResource = {
+export type TriggerResource = Trigger & {
   _resourceType: "trigger";
-  id: string;
-  name: string;
-  symbol: string;
-  notes?: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  script: ScriptEvent[];
-  leaveScript: ScriptEvent[];
+};
+
+export type ScriptResource = CustomEvent & {
+  _resourceType: "script";
+};
+
+export type CompressedBackgroundResource = Omit<Background, "tileColors"> & {
+  _resourceType: "background";
+  tileColors: string;
+};
+
+export type BackgroundResource = Omit<
+  CompressedBackgroundResource,
+  "tileColors"
+> & {
+  tileColors: number[];
+};
+
+export type VariablesResource = {
+  _resourceType: "variables";
+  variables: Variable[];
 };
 
 export type CompressedProjectResources = {
   scenes: CompressedSceneResourceWithChildren[];
   actors: ActorResource[];
   triggers: TriggerResource[];
+  scripts: ScriptResource[];
+  backgrounds: CompressedBackgroundResource[];
+  variables: VariablesResource;
 };
 
-export type ProjectResources = Omit<CompressedProjectResources, "scenes"> & {
+export type ProjectResources = Omit<
+  CompressedProjectResources,
+  "scenes" | "backgrounds"
+> & {
   scenes: SceneResource[];
+  backgrounds: BackgroundResource[];
 };
