@@ -33,6 +33,7 @@ import promiseLimit from "lib/helpers/promiseLimit";
 import {
   CompressedBackgroundResource,
   CompressedProjectResources,
+  EngineFieldValuesResource,
   MusicResource,
   PaletteResource,
   SettingsResource,
@@ -736,8 +737,11 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     }
   }
 
-  const variableResource: VariablesResource = (resourcesLookup.variables ??
+  const variablesResource: VariablesResource = (resourcesLookup.variables ??
     [])[0].data;
+
+  const engineFieldValuesResource: EngineFieldValuesResource =
+    (resourcesLookup.engineFieldValues ?? [])[0].data;
 
   const settingsResource: SettingsResource = (
     resourcesLookup.settings ?? []
@@ -780,7 +784,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       sounds: soundResources,
       music: musicResources,
       palettes: paletteResources,
-      variables: variableResource,
+      variables: variablesResource,
+      engineFieldValues: engineFieldValuesResource,
       settings: settingsResource,
     },
     modifiedSpriteIds,

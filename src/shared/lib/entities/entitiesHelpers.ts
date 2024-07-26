@@ -191,8 +191,10 @@ const spriteStatesSchema = new schema.Entity("spriteStates", {
 const spriteSheetsSchema = new schema.Entity("spriteSheets", {
   states: [spriteStatesSchema],
 });
-
 const variablesSchema = new schema.Entity("variables");
+const variablesResourceSchema = new schema.Entity("variableResources", {
+  variables: [variablesSchema],
+});
 const sceneSchema = new schema.Entity("scenes", {
   // actors: [actorSchema],
   // triggers: [triggerSchema],
@@ -209,6 +211,12 @@ const scriptsSchema = new schema.Entity("scripts", {
 });
 const palettesSchema = new schema.Entity("palettes");
 const engineFieldValuesSchema = new schema.Entity("engineFieldValues");
+const engineFieldValuesResourceSchema = new schema.Entity(
+  "engineFieldValueResources",
+  {
+    engineFieldValues: [engineFieldValuesSchema],
+  }
+);
 
 const projectSchema = {
   scenes: [sceneSchema],
@@ -238,10 +246,10 @@ const resourcesSchema = {
   emotes: [emoteSchema],
   tilesets: [tilesetSchema],
   spriteSheets: [spriteSheetsSchema],
-  variables: [variablesSchema],
+  variables: variablesResourceSchema,
   scripts: [scriptsSchema],
   palettes: [palettesSchema],
-  engineFieldValues: [engineFieldValuesSchema],
+  engineFieldValues: engineFieldValuesResourceSchema,
 };
 
 export const normalizeEntities = (

@@ -4,6 +4,7 @@ import type {
   Background,
   CustomEvent,
   EmoteData,
+  EngineFieldValue,
   FontData,
   MusicData,
   Palette,
@@ -98,6 +99,11 @@ export type VariablesResource = {
   variables: Variable[];
 };
 
+export type EngineFieldValuesResource = {
+  _resourceType: "engineFieldValues";
+  engineFieldValues: EngineFieldValue[];
+};
+
 export type CompressedProjectResources = {
   scenes: CompressedSceneResourceWithChildren[];
   actors: ActorResource[];
@@ -112,6 +118,7 @@ export type CompressedProjectResources = {
   music: MusicResource[];
   palettes: PaletteResource[];
   variables: VariablesResource;
+  engineFieldValues: EngineFieldValuesResource;
   settings: SettingsResource;
 };
 

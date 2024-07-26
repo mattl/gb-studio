@@ -308,7 +308,7 @@ const loadProject: CaseReducer<
   variablesAdapter.setAll(state.variables, data2.entities.variables || {});
   engineFieldValuesAdapter.setAll(
     state.engineFieldValues,
-    entities.engineFieldValues || {}
+    data2.entities.engineFieldValues || {}
   );
   console.timeEnd("entitiesState.loadProject setC");
 
