@@ -553,18 +553,14 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       type: string;
       data: R;
     }[],
-    mergeFn: (asset: A, resource: R) => R,
-    newFn: (asset: A) => R
+    mergeFn: (asset: A, resource: R | undefined) => R
   ) => {
     const oldResourceByFilename = indexResourceByFilename(resources || []);
     return assets
       .map((asset) => {
         const oldResource: R =
           oldResourceByFilename[toAssetFilename(asset)]?.data;
-        if (oldResource) {
-          return mergeFn(asset, oldResource);
-        }
-        return newFn(asset);
+        return mergeFn(asset, oldResource);
       })
       .sort(sortByName);
   };
@@ -581,23 +577,13 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     }[],
     resourceType: B
   ) => {
-    return mergeAssetsWithResources(
-      assets,
-      resources,
-      (asset, resource) => {
-        return {
-          _resourceType: resourceType,
-          ...asset,
-          id: resource.id,
-        };
-      },
-      (asset) => {
-        return {
-          _resourceType: resourceType,
-          ...asset,
-        };
-      }
-    );
+    return mergeAssetsWithResources(assets, resources, (asset, resource) => {
+      return {
+        _resourceType: resourceType,
+        ...asset,
+        id: resource?.id ?? asset.id,
+      };
+    });
   };
 
   const mergeAssetIdAndSymbolsWithResources = <
@@ -612,34 +598,21 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     }[],
     resourceType: B
   ) => {
-    return mergeAssetsWithResources(
-      assets,
-      resources,
-      (asset, resource) => {
-        return {
-          _resourceType: resourceType,
-          ...asset,
-          id: resource.id,
-          symbol:
-            resource?.symbol !== undefined ? resource.symbol : asset.symbol,
-        };
-      },
-      (asset) => {
-        return {
-          _resourceType: resourceType,
-          ...asset,
-        };
-      }
-    );
+    return mergeAssetsWithResources(assets, resources, (asset, resource) => {
+      return {
+        _resourceType: resourceType,
+        ...asset,
+        id: resource?.id ?? asset.id,
+        symbol: resource?.symbol ?? asset.symbol,
+      };
+    });
   };
 
   const backgroundResources = mergeAssetsWithResources<
     CompressedBackgroundResource,
     BackgroundAssetData
-  >(
-    backgrounds,
-    resourcesLookup.background,
-    (asset, resource) => {
+  >(backgrounds, resourcesLookup.background, (asset, resource) => {
+    if (resource) {
       return {
         _resourceType: "background",
         ...asset,
@@ -650,15 +623,13 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
         autoColor:
           resource?.autoColor !== undefined ? resource.autoColor : false,
       };
-    },
-    (asset) => {
-      return {
-        _resourceType: "background",
-        ...asset,
-        tileColors: "",
-      };
     }
-  );
+    return {
+      _resourceType: "background",
+      ...asset,
+      tileColors: "",
+    };
+  });
 
   const emoteResources = mergeAssetIdAndSymbolsWithResources(
     emotes,
@@ -693,10 +664,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const musicResources = mergeAssetsWithResources<
     MusicResource,
     MusicAssetData
-  >(
-    music,
-    resourcesLookup.music,
-    (asset, resource) => {
+  >(music, resourcesLookup.music, (asset, resource) => {
+    if (resource) {
       return {
         _resourceType: "music",
         ...asset,
@@ -706,13 +675,13 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
           ...resource.settings,
         },
       };
-    },
-    (asset) => ({
+    }
+    return {
       _resourceType: "music",
       ...asset,
       settings: {},
-    })
-  );
+    };
+  });
 
   const paletteResources: PaletteResource[] = (
     resourcesLookup.palette ?? []
