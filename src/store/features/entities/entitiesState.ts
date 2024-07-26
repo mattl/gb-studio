@@ -249,10 +249,6 @@ const loadProject: CaseReducer<
   console.log("ENTITIES HANDLE LOAD PROJECT START", new Date().valueOf());
   console.time("entitiesState.loadProject");
 
-  console.time("entitiesState.loadProject normalizeEntities");
-  const data = normalizeEntities(action.payload.data);
-  console.timeEnd("entitiesState.loadProject normalizeEntities");
-
   console.time("entitiesState.loadProject uncompressResources");
   const uncompressedResources = decompressProjectResources(
     action.payload.resources
@@ -266,7 +262,7 @@ const loadProject: CaseReducer<
   console.log({ data2 });
   console.timeEnd("entitiesState.loadProject normalizeEntityResources");
 
-  const entities = data.entities;
+  // const entities = data.entities;
   console.time("entitiesState.loadProject setA");
 
   actorsAdapter.setAll(state.actors, data2.entities.actors || {});
@@ -280,20 +276,26 @@ const loadProject: CaseReducer<
     state.backgrounds,
     data2.entities.backgrounds || {}
   );
-  spriteSheetsAdapter.setAll(state.spriteSheets, entities.spriteSheets || {});
-  metaspritesAdapter.setAll(state.metasprites, entities.metasprites || {});
+  spriteSheetsAdapter.setAll(state.spriteSheets, data2.entities.sprites || {});
+  metaspritesAdapter.setAll(
+    state.metasprites,
+    data2.entities.metasprites || {}
+  );
   console.timeEnd("entitiesState.loadProject setA");
   console.time("entitiesState.loadProject setB");
 
   metaspriteTilesAdapter.setAll(
     state.metaspriteTiles,
-    entities.metaspriteTiles || {}
+    data2.entities.metaspriteTiles || {}
   );
   spriteAnimationsAdapter.setAll(
     state.spriteAnimations,
-    entities.spriteAnimations || {}
+    data2.entities.spriteAnimations || {}
   );
-  spriteStatesAdapter.setAll(state.spriteStates, entities.spriteStates || {});
+  spriteStatesAdapter.setAll(
+    state.spriteStates,
+    data2.entities.spriteStates || {}
+  );
   palettesAdapter.setAll(state.palettes, data2.entities.palettes || {});
   musicAdapter.setAll(state.music, data2.entities.music || {});
   soundsAdapter.setAll(state.sounds, data2.entities.sounds || {});

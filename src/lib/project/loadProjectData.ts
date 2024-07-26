@@ -6,7 +6,7 @@ import { promisify } from "util";
 import loadAllBackgroundData, {
   BackgroundAssetData,
 } from "./loadBackgroundData";
-import loadAllSpriteData from "./loadSpriteData";
+import loadAllSpriteData, { SpriteAssetData } from "./loadSpriteData";
 import loadAllMusicData, { MusicAssetData } from "./loadMusicData";
 import loadAllFontData from "./loadFontData";
 import loadAllAvatarData from "./loadAvatarData";
@@ -37,6 +37,7 @@ import {
   MusicResource,
   PaletteResource,
   SettingsResource,
+  SpriteResource,
   VariablesResource,
 } from "shared/lib/resources/types";
 import { defaultProjectSettings } from "consts";
@@ -631,6 +632,109 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     };
   });
 
+  const spriteResources = mergeAssetsWithResources<
+    SpriteResource,
+    SpriteAssetData
+  >(sprites, resourcesLookup.sprite, (asset, resource) => {
+    if (!resource || !resource.states || resource.numTiles === undefined) {
+      modifiedSpriteIds.push(resource?.id ?? asset.id);
+    }
+    return {
+      ...asset,
+      ...resource,
+      id: resource?.id ?? asset.id,
+      symbol: resource?.symbol ?? asset.symbol,
+      filename: asset.filename,
+      name: resource?.name ?? asset.name,
+      canvasWidth: resource?.canvasWidth || 32,
+      canvasHeight: resource?.canvasHeight || 32,
+      states: (
+        resource?.states || [
+          {
+            id: uuid(),
+            name: "",
+            animationType: "multi_movement",
+            flipLeft: true,
+            animations: [],
+          },
+        ]
+      ).map((oldState) => {
+        return {
+          ...oldState,
+          animations: Array.from(Array(8)).map((_, animationIndex) => ({
+            id:
+              (oldState.animations &&
+                oldState.animations[animationIndex] &&
+                oldState.animations[animationIndex].id) ||
+              uuid(),
+            frames: (oldState.animations &&
+              oldState.animations[animationIndex] &&
+              oldState.animations[animationIndex].frames) || [
+              {
+                id: uuid(),
+                tiles: [],
+              },
+            ],
+          })),
+        };
+      }),
+    } as SpriteResource;
+  });
+
+  /*
+  const fixedSpriteIds = sprites
+    .map((sprite) => {
+      const oldSprite = oldSpriteByFilename[toAssetFilename(sprite)];
+      const oldData = oldSprite || {};
+      const id = oldData.id || sprite.id;
+
+      if (!oldSprite || !oldSprite.states || oldSprite.numTiles === undefined) {
+        modifiedSpriteIds.push(id);
+      }
+
+      return {
+        ...sprite,
+        ...oldData,
+        id,
+        symbol: oldData?.symbol !== undefined ? oldData.symbol : sprite.symbol,
+        filename: sprite.filename,
+        name: oldData.name || sprite.name,
+        canvasWidth: oldData.canvasWidth || 32,
+        canvasHeight: oldData.canvasHeight || 32,
+        states: (
+          oldData.states || [
+            {
+              id: uuid(),
+              name: "",
+              animationType: "multi_movement",
+              flipLeft: true,
+            },
+          ]
+        ).map((oldState) => {
+          return {
+            ...oldState,
+            animations: Array.from(Array(8)).map((_, animationIndex) => ({
+              id:
+                (oldState.animations &&
+                  oldState.animations[animationIndex] &&
+                  oldState.animations[animationIndex].id) ||
+                uuid(),
+              frames: (oldState.animations &&
+                oldState.animations[animationIndex] &&
+                oldState.animations[animationIndex].frames) || [
+                {
+                  id: uuid(),
+                  tiles: [],
+                },
+              ],
+            })),
+          };
+        }),
+      };
+    })
+    .sort(sortByName);
+*/
+
   const emoteResources = mergeAssetIdAndSymbolsWithResources(
     emotes,
     resourcesLookup.emote,
@@ -745,6 +849,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       actors: actorResources,
       triggers: triggerResources,
       scripts: scriptResources,
+      sprites: spriteResources,
       backgrounds: backgroundResources,
       emotes: emoteResources,
       avatars: avatarResources,

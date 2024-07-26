@@ -91,7 +91,7 @@ export interface NormalizedEntities2 {
   triggers: Record<EntityId, TriggerNormalized>;
   scriptEvents: Record<EntityId, ScriptEventNormalized>;
   backgrounds: Record<EntityId, Background>;
-  spriteSheets: Record<EntityId, SpriteSheet>;
+  sprites: Record<EntityId, SpriteSheet>;
   metasprites: Record<EntityId, Metasprite>;
   metaspriteTiles: Record<EntityId, MetaspriteTile>;
   spriteAnimations: Record<EntityId, SpriteAnimation>;
@@ -191,6 +191,9 @@ const spriteStatesSchema = new schema.Entity("spriteStates", {
 const spriteSheetsSchema = new schema.Entity("spriteSheets", {
   states: [spriteStatesSchema],
 });
+const spritesSchema = new schema.Entity("sprites", {
+  states: [spriteStatesSchema],
+});
 const variablesSchema = new schema.Entity("variables");
 const variablesResourceSchema = new schema.Entity("variableResources", {
   variables: [variablesSchema],
@@ -245,7 +248,7 @@ const resourcesSchema = {
   avatars: [avatarSchema],
   emotes: [emoteSchema],
   tilesets: [tilesetSchema],
-  spriteSheets: [spriteSheetsSchema],
+  sprites: [spritesSchema],
   variables: variablesResourceSchema,
   scripts: [scriptsSchema],
   palettes: [palettesSchema],

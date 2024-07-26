@@ -10,11 +10,12 @@ import type {
   Palette,
   Scene,
   SoundData,
+  SpriteSheetData,
   Tileset,
   Trigger,
   Variable,
 } from "shared/lib/entities/entitiesTypes";
-import { SettingsState } from "store/features/settings/settingsState";
+import type { SettingsState } from "store/features/settings/settingsState";
 
 // type ProjectResourceType = "scene" | "actor" | "trigger";
 
@@ -66,6 +67,10 @@ export type TilesetResource = Tileset & {
   _resourceType: "tileset";
 };
 
+export type SpriteResource = SpriteSheetData & {
+  _resourceType: "sprite";
+};
+
 export type EmoteResource = EmoteData & {
   _resourceType: "emote";
 };
@@ -109,6 +114,7 @@ export type CompressedProjectResources = {
   actors: ActorResource[];
   triggers: TriggerResource[];
   scripts: ScriptResource[];
+  sprites: SpriteResource[];
   backgrounds: CompressedBackgroundResource[];
   emotes: EmoteResource[];
   avatars: AvatarResource[];
