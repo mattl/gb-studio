@@ -681,60 +681,6 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     } as SpriteResource;
   });
 
-  /*
-  const fixedSpriteIds = sprites
-    .map((sprite) => {
-      const oldSprite = oldSpriteByFilename[toAssetFilename(sprite)];
-      const oldData = oldSprite || {};
-      const id = oldData.id || sprite.id;
-
-      if (!oldSprite || !oldSprite.states || oldSprite.numTiles === undefined) {
-        modifiedSpriteIds.push(id);
-      }
-
-      return {
-        ...sprite,
-        ...oldData,
-        id,
-        symbol: oldData?.symbol !== undefined ? oldData.symbol : sprite.symbol,
-        filename: sprite.filename,
-        name: oldData.name || sprite.name,
-        canvasWidth: oldData.canvasWidth || 32,
-        canvasHeight: oldData.canvasHeight || 32,
-        states: (
-          oldData.states || [
-            {
-              id: uuid(),
-              name: "",
-              animationType: "multi_movement",
-              flipLeft: true,
-            },
-          ]
-        ).map((oldState) => {
-          return {
-            ...oldState,
-            animations: Array.from(Array(8)).map((_, animationIndex) => ({
-              id:
-                (oldState.animations &&
-                  oldState.animations[animationIndex] &&
-                  oldState.animations[animationIndex].id) ||
-                uuid(),
-              frames: (oldState.animations &&
-                oldState.animations[animationIndex] &&
-                oldState.animations[animationIndex].frames) || [
-                {
-                  id: uuid(),
-                  tiles: [],
-                },
-              ],
-            })),
-          };
-        }),
-      };
-    })
-    .sort(sortByName);
-*/
-
   const emoteResources = mergeAssetIdAndSymbolsWithResources(
     emotes,
     resourcesLookup.emote,
