@@ -143,3 +143,8 @@ export type ProjectResources = Omit<
   scenes: SceneResource[];
   backgrounds: BackgroundResource[];
 };
+
+export type ProjectEntityResources = Omit<
+  ProjectResources,
+  "settings" | "metadata"
+>;

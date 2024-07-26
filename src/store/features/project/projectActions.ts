@@ -18,6 +18,8 @@ import { denormalizeEntities } from "shared/lib/entities/entitiesHelpers";
 import API from "renderer/lib/api";
 import { Asset, AssetType } from "shared/lib/helpers/assets";
 import type { LoadProjectResult } from "lib/project/loadProjectData";
+import { ProjectResources } from "shared/lib/resources/types";
+import { compressProjectResources } from "shared/lib/resources/compression";
 
 let saving = false;
 
@@ -34,15 +36,21 @@ export const denormalizeProject = (project: {
   entities: EntitiesState;
   settings: SettingsState;
   metadata: MetadataState;
-}): ProjectData => {
+}): ProjectResources => {
+  // @TODO Set this to return Readonly<ProjectResources>
   const entitiesData = denormalizeEntities(project.entities);
-  return JSON.parse(
-    JSON.stringify({
+  console.log({ entitiesData });
+  return {
+    ...entitiesData,
+    settings: {
+      _resourceType: "settings",
+      ...project.settings,
+    },
+    metadata: {
+      _resourceType: "project",
       ...project.metadata,
-      ...entitiesData,
-      settings: project.settings,
-    })
-  );
+    },
+  };
 };
 
 export const trimProjectData = (data: ProjectData): ProjectData => {
@@ -247,11 +255,11 @@ const saveProject = createAsyncThunk<void>(
     saving = true;
 
     try {
-      const normalizedProject = trimProjectData(
-        denormalizeProject(state.project.present)
-      );
+      const normalizedProject = denormalizeProject(state.project.present);
 
-      const data: ProjectData = {
+      console.log({ normalizedProject });
+
+      const data = compressProjectResources({
         ...normalizedProject,
         settings: {
           ...normalizedProject.settings,
@@ -262,7 +270,8 @@ const saveProject = createAsyncThunk<void>(
             ? state.editor.navigatorSplitSizes
             : normalizedProject.settings.navigatorSplitSizes,
         },
-      };
+      });
+      console.log({ compressedData: data });
 
       // Save
       await API.project.saveProject(data);

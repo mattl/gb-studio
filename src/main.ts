@@ -113,6 +113,7 @@ import { loadSceneTypes } from "lib/project/sceneTypes";
 import { fileExists } from "lib/helpers/fs/fileExists";
 import confirmDeleteAsset from "lib/electron/dialog/confirmDeleteAsset";
 import { getPatronsFromGithub } from "lib/credits/getPatronsFromGithub";
+import { CompressedProjectResources } from "shared/lib/resources/types";
 
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -1198,9 +1199,12 @@ ipcMain.handle("project:load", async (): Promise<LoadProjectResult> => {
   return data;
 });
 
-ipcMain.handle("project:save", async (_, data: ProjectData): Promise<void> => {
-  await saveProjectData(projectPath, data);
-});
+ipcMain.handle(
+  "project:save",
+  async (_, data: CompressedProjectResources): Promise<void> => {
+    await saveProjectData(projectPath, data);
+  }
+);
 
 ipcMain.handle(
   "project:build",

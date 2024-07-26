@@ -92,3 +92,31 @@ export const decompressProjectResources = (
     ),
   };
 };
+
+const compressSceneResource = (
+  scene: SceneResource
+): CompressedSceneResourceWithChildren => {
+  return {
+    ...scene,
+    collisions: compress8bitNumberArray(scene.collisions),
+  };
+};
+
+const compressBackgroundResource = (
+  background: BackgroundResource
+): CompressedBackgroundResource => {
+  return {
+    ...background,
+    tileColors: compress8bitNumberArray(background.tileColors),
+  };
+};
+
+export const compressProjectResources = (
+  resources: ProjectResources
+): CompressedProjectResources => {
+  return {
+    ...resources,
+    scenes: resources.scenes.map(compressSceneResource),
+    backgrounds: resources.backgrounds.map(compressBackgroundResource),
+  };
+};
