@@ -112,7 +112,7 @@ export type CompressedProjectResources = {
   music: MusicResource[];
   palettes: PaletteResource[];
   variables: VariablesResource;
-  // settings: SettingsResource;
+  settings: SettingsResource;
 };
 
 export type ProjectResources = Omit<

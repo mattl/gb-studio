@@ -35,9 +35,10 @@ import {
   CompressedProjectResources,
   MusicResource,
   PaletteResource,
+  SettingsResource,
   VariablesResource,
 } from "shared/lib/resources/types";
-import { Palette } from "shared/lib/entities/entitiesTypes";
+import { defaultProjectSettings } from "consts";
 
 export interface LoadProjectResult {
   data: ProjectData;
@@ -738,6 +739,18 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const variableResource: VariablesResource = (resourcesLookup.variables ??
     [])[0].data;
 
+  const settingsResource: SettingsResource = (
+    resourcesLookup.settings ?? []
+  ).reduce(
+    (memo, resource) => {
+      return {
+        ...memo,
+        ...resource.data,
+      };
+    },
+    { _resourceType: "settings", ...defaultProjectSettings }
+  );
+
   return {
     data: {
       ...json,
@@ -768,6 +781,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       music: musicResources,
       palettes: paletteResources,
       variables: variableResource,
+      settings: settingsResource,
     },
     modifiedSpriteIds,
     isMigrated,
