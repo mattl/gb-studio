@@ -40,10 +40,9 @@ import {
   SpriteResource,
   VariablesResource,
 } from "shared/lib/resources/types";
-import { defaultProjectSettings } from "consts";
+import { defaultPalettes, defaultProjectSettings } from "consts";
 
 export interface LoadProjectResult {
-  data: ProjectData;
   resources: CompressedProjectResources;
   scriptEventDefs: Dictionary<ScriptEventDef>;
   engineFields: EngineFieldSchema[];
@@ -54,6 +53,8 @@ export interface LoadProjectResult {
 
 const globAsync = promisify(glob);
 
+const CONCURRENT_RESOURCE_LOAD_COUNT = 8;
+
 const toUnixFilename = (filename: string) => {
   return filename.replace(/\\/g, "/");
 };
@@ -61,9 +62,6 @@ const toUnixFilename = (filename: string) => {
 const toAssetFilename = (elem: Asset) => {
   return (elem.plugin ? `${elem.plugin}/` : "") + toUnixFilename(elem.filename);
 };
-
-const indexByFilename = <T extends Asset>(arr: T[]): Record<string, T> =>
-  keyBy(arr || [], toAssetFilename);
 
 const indexResourceByFilename = <T extends { data: Asset }>(
   arr: T[]
@@ -90,19 +88,16 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   );
   console.timeEnd("loadProjectData.loadProject globResources");
 
-  // console.time("loadProjectData.loadProject readResources");
-  // for (const projectResourcePath of projectResources) {
-  //   const resourceJson = await fs.readJson(projectResourcePath);
-  // }
-  // console.timeEnd("loadProjectData.loadProject readResources");
-
   console.time("loadProjectData.loadProject readResources2");
   const resources = await promiseLimit(
-    8,
+    CONCURRENT_RESOURCE_LOAD_COUNT,
     projectResources.map((projectResourcePath) => async () => {
       const resourceData = await fs.readJson(projectResourcePath);
       return {
-        path: projectResourcePath,
+        path: path
+          .relative(projectRoot, projectResourcePath)
+          .split(path.sep)
+          .join(path.posix.sep),
         type: resourceData._resourceType,
         data: resourceData,
       };
@@ -110,16 +105,9 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   );
   console.timeEnd("loadProjectData.loadProject readResources2");
 
-  console.log("resources.length === ", resources.length);
   console.time("loadProjectData.loadProject build resourcesLookup");
   const resourcesLookup = groupBy(resources, "type");
   console.timeEnd("loadProjectData.loadProject build resourcesLookup");
-
-  console.log(resourcesLookup);
-
-  // console.log(resources);
-
-  // console.log({ projectResources });
 
   console.time("loadProjectData.loadProject scriptEventDefs");
   const scriptEventDefs = await loadAllScriptEventHandlers(projectRoot);
@@ -172,229 +160,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   ]);
   console.timeEnd("loadProjectData.loadProject loadAssets");
 
-  console.time("loadProjectData.loadProject fixBackgrounds");
-
-  // Merge stored backgrounds data with file system data
-  const oldBackgroundByFilename = indexByFilename(json.backgrounds || []);
-
-  const fixedBackgroundIds = backgrounds
-    .map((background) => {
-      const oldBackground =
-        oldBackgroundByFilename[toAssetFilename(background)];
-      if (oldBackground) {
-        return {
-          ...background,
-          id: oldBackground.id,
-          symbol:
-            oldBackground?.symbol !== undefined
-              ? oldBackground.symbol
-              : background.symbol,
-          tileColors:
-            oldBackground?.tileColors !== undefined
-              ? oldBackground.tileColors
-              : [],
-          autoColor:
-            oldBackground?.autoColor !== undefined
-              ? oldBackground.autoColor
-              : false,
-        };
-      }
-      return {
-        ...background,
-        tileColors: [],
-      };
-    })
-    .sort(sortByName);
-  console.timeEnd("loadProjectData.loadProject fixBackgrounds");
-
-  console.time("loadProjectData.loadProject fixSprites");
-
-  // Merge stored sprite data with file system data
-  const oldSpriteByFilename = indexByFilename(json.spriteSheets || []);
   const modifiedSpriteIds: string[] = [];
-
-  const fixedSpriteIds = sprites
-    .map((sprite) => {
-      const oldSprite = oldSpriteByFilename[toAssetFilename(sprite)];
-      const oldData = oldSprite || {};
-      const id = oldData.id || sprite.id;
-
-      if (!oldSprite || !oldSprite.states || oldSprite.numTiles === undefined) {
-        modifiedSpriteIds.push(id);
-      }
-
-      return {
-        ...sprite,
-        ...oldData,
-        id,
-        symbol: oldData?.symbol !== undefined ? oldData.symbol : sprite.symbol,
-        filename: sprite.filename,
-        name: oldData.name || sprite.name,
-        canvasWidth: oldData.canvasWidth || 32,
-        canvasHeight: oldData.canvasHeight || 32,
-        states: (
-          oldData.states || [
-            {
-              id: uuid(),
-              name: "",
-              animationType: "multi_movement",
-              flipLeft: true,
-            },
-          ]
-        ).map((oldState) => {
-          return {
-            ...oldState,
-            animations: Array.from(Array(8)).map((_, animationIndex) => ({
-              id:
-                (oldState.animations &&
-                  oldState.animations[animationIndex] &&
-                  oldState.animations[animationIndex].id) ||
-                uuid(),
-              frames: (oldState.animations &&
-                oldState.animations[animationIndex] &&
-                oldState.animations[animationIndex].frames) || [
-                {
-                  id: uuid(),
-                  tiles: [],
-                },
-              ],
-            })),
-          };
-        }),
-      };
-    })
-    .sort(sortByName);
-
-  console.timeEnd("loadProjectData.loadProject fixSprites");
-
-  console.time("loadProjectData.loadProject fixMusic");
-
-  // Merge stored music data with file system data
-  const oldMusicByFilename = indexByFilename(json.music || []);
-
-  const fixedMusicIds = music
-    .map((track) => {
-      const oldTrack = oldMusicByFilename[toAssetFilename(track)];
-      if (oldTrack) {
-        return {
-          ...track,
-          id: oldTrack.id,
-          symbol:
-            oldTrack?.symbol !== undefined ? oldTrack.symbol : track.symbol,
-          settings: {
-            ...oldTrack.settings,
-          },
-        };
-      }
-      return track;
-    })
-    .sort(sortByName);
-
-  console.timeEnd("loadProjectData.loadProject fixMusic");
-
-  console.time("loadProjectData.loadProject fixSounds");
-
-  // Merge stored sound effect data with file system data
-  const oldSoundByFilename = indexByFilename(json.sounds || []);
-
-  const fixedSoundIds = sounds
-    .map((sound) => {
-      const oldSound = oldSoundByFilename[toAssetFilename(sound)];
-      if (oldSound) {
-        return {
-          ...sound,
-          id: oldSound.id,
-          symbol:
-            oldSound?.symbol !== undefined ? oldSound.symbol : sound.symbol,
-        };
-      }
-      return sound;
-    })
-    .sort(sortByName);
-
-  console.timeEnd("loadProjectData.loadProject fixSounds");
-  console.time("loadProjectData.loadProject fixFonts");
-
-  // Merge stored fonts data with file system data
-  const oldFontByFilename = indexByFilename(json.fonts || []);
-
-  const fixedFontIds = fonts
-    .map((font) => {
-      const oldFont = oldFontByFilename[toAssetFilename(font)];
-      if (oldFont) {
-        return {
-          ...font,
-          id: oldFont.id,
-          symbol: oldFont?.symbol !== undefined ? oldFont.symbol : font.symbol,
-        };
-      }
-      return font;
-    })
-    .sort(sortByName);
-  console.timeEnd("loadProjectData.loadProject fixFonts");
-
-  console.time("loadProjectData.loadProject fixAvatars");
-
-  // Merge stored avatars data with file system data
-  const oldAvatarByFilename = indexByFilename(json.avatars || []);
-
-  const fixedAvatarIds = avatars
-    .map((avatar) => {
-      const oldAvatar = oldAvatarByFilename[toAssetFilename(avatar)];
-      if (oldAvatar) {
-        return {
-          ...avatar,
-          id: oldAvatar.id,
-        };
-      }
-      return avatar;
-    })
-    .sort(sortByName);
-  console.timeEnd("loadProjectData.loadProject fixAvatars");
-
-  console.time("loadProjectData.loadProject fixEmotes");
-
-  // Merge stored emotes data with file system data
-  const oldEmoteByFilename = indexByFilename(json.emotes || []);
-
-  const fixedEmoteIds = emotes
-    .map((emote) => {
-      const oldEmote = oldEmoteByFilename[toAssetFilename(emote)];
-      if (oldEmote) {
-        return {
-          ...emote,
-          id: oldEmote.id,
-          symbol:
-            oldEmote?.symbol !== undefined ? oldEmote.symbol : emote.symbol,
-        };
-      }
-      return emote;
-    })
-    .sort(sortByName);
-  console.timeEnd("loadProjectData.loadProject fixEmotes");
-
-  console.time("loadProjectData.loadProject fixTilesets");
-
-  // Merge stored tilesets data with file system data
-  const oldTilesetByFilename = indexByFilename(json.tilesets || []);
-
-  const fixedTilesetIds = tilesets
-    .map((tileset) => {
-      const oldTileset = oldTilesetByFilename[toAssetFilename(tileset)];
-      if (oldTileset) {
-        return {
-          ...tileset,
-          id: oldTileset.id,
-          symbol:
-            oldTileset?.symbol !== undefined
-              ? oldTileset.symbol
-              : tileset.symbol,
-        };
-      }
-      return tileset;
-    })
-    .sort(sortByName);
-  console.timeEnd("loadProjectData.loadProject fixTilesets");
 
   const addMissingEntityId = <T extends { id: string }>(entity: T) => {
     if (!entity.id) {
@@ -406,143 +172,70 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     return entity;
   };
 
-  console.time("loadProjectData.loadProject fixScenes");
-
-  // Fix ids on actors and triggers
-  const fixedScenes = (json.scenes || []).map((scene) => {
-    return {
-      ...scene,
-      actors: scene.actors.map(addMissingEntityId),
-      triggers: scene.triggers.map(addMissingEntityId),
-    };
-  });
-  console.timeEnd("loadProjectData.loadProject fixScenes");
-
-  console.time("loadProjectData.loadProject fixCustomEvents");
-
-  const fixedCustomEvents = (json.customEvents || []).map(addMissingEntityId);
-  console.timeEnd("loadProjectData.loadProject fixCustomEvents");
-
   console.time("loadProjectData.loadProject fixPalettes");
 
-  const defaultPalettes = [
-    {
-      id: "default-bg-1",
-      name: "Default BG 1",
-      colors: ["F8E8C8", "D89048", "A82820", "301850"],
-    },
-    {
-      id: "default-bg-2",
-      name: "Default BG 2",
-      colors: ["E0F8A0", "78C838", "488818", "081800"],
-    },
-    {
-      id: "default-bg-3",
-      name: "Default BG 3",
-      colors: ["F8D8A8", "E0A878", "785888", "002030"],
-    },
-    {
-      id: "default-bg-4",
-      name: "Default BG 4",
-      colors: ["B8D0D0", "D880D8", "8000A0", "380000"],
-    },
-    {
-      id: "default-bg-5",
-      name: "Default BG 5",
-      colors: ["F8F8B8", "90C8C8", "486878", "082048"],
-    },
-    {
-      id: "default-bg-6",
-      name: "Default BG 6",
-      colors: ["F8D8B0", "78C078", "688840", "583820"],
-    },
-    {
-      id: "default-sprite",
-      name: "Default Sprites",
-      colors: ["F8F0E0", "D88078", "B05010", "000000"],
-    },
-    {
-      id: "default-ui",
-      name: "Default UI",
-      colors: ["F8F8B8", "90C8C8", "486878", "082048"],
-    },
-  ] as {
-    id: string;
-    name: string;
-    colors: [string, string, string, string];
-  }[];
-
-  const fixedPalettes = (json.palettes || []).map(addMissingEntityId);
-
-  for (let i = 0; i < defaultPalettes.length; i++) {
-    const defaultPalette = defaultPalettes[i];
-    const existingPalette = fixedPalettes.find(
-      (p) => p.id === defaultPalette.id
-    );
-    if (existingPalette) {
-      existingPalette.defaultName = defaultPalette.name;
-      existingPalette.defaultColors = defaultPalette.colors;
-    } else {
-      fixedPalettes.push({
-        ...defaultPalette,
-        defaultName: defaultPalette.name,
-        defaultColors: defaultPalette.colors,
-      });
-    }
-  }
   console.timeEnd("loadProjectData.loadProject fixPalettes");
 
-  console.time("loadProjectData.loadProject fixEngineFieldValues");
+  console.time("loadProjectData.loadProject build actorsBySceneFolderLookup");
+  const actorSubFolder = `${path.posix.sep}actors${path.posix.sep}`;
+  const actorsBySceneFolderLookup = groupBy(
+    resourcesLookup.actor ?? [],
+    (row) => {
+      const actorFolderIndex = row.path.lastIndexOf(actorSubFolder);
+      return row.path.substring(0, actorFolderIndex);
+    }
+  );
+  console.timeEnd(
+    "loadProjectData.loadProject build actorsBySceneFolderLookup"
+  );
 
-  const fixedEngineFieldValues = json.engineFieldValues || [];
-  console.timeEnd("loadProjectData.loadProject fixEngineFieldValues");
+  console.time("loadProjectData.loadProject build triggersBySceneFolderLookup");
+  const triggerSubFolder = `${path.posix.sep}triggers${path.posix.sep}`;
+  const triggersBySceneFolderLookup = groupBy(
+    resourcesLookup.trigger ?? [],
+    (row) => {
+      const triggerFolderIndex = row.path.lastIndexOf(triggerSubFolder);
+      return row.path.substring(0, triggerFolderIndex);
+    }
+  );
+  console.timeEnd(
+    "loadProjectData.loadProject build triggersBySceneFolderLookup"
+  );
 
-  console.log("ACTORS", resourcesLookup.actor);
-
-  //   console.log(
-  //     "ACTORS MAPPED",
-  //     (resourcesLookup.actor ?? []).map((row) => addMissingEntityId({
-  //       ...row.data,
-  //       actors: (resourcesLookup.actor ?? [])
-  // }))
-  //   );
+  console.time("loadProjectData.loadProject build sceneResources");
 
   const sceneResources = (resourcesLookup.scene ?? []).map((row) => {
-    const sceneDir = path.dirname(row.path);
-    const actorsDir = path.join(sceneDir, "actors");
-    const triggersDir = path.join(sceneDir, "triggers");
+    const sceneDir = path.posix.dirname(row.path);
     return addMissingEntityId({
       ...row.data,
-      actors: (resourcesLookup.actor ?? [])
-        .filter((actorRow) => {
-          const relative = path.relative(actorsDir, actorRow.path);
-          return (
-            relative && !relative.startsWith("..") && !path.isAbsolute(relative)
-          );
-        })
-        .map((actorRow) => actorRow.data.id),
-      triggers: (resourcesLookup.trigger ?? [])
-        .filter((triggerRow) => {
-          const relative = path.relative(triggersDir, triggerRow.path);
-          return (
-            relative && !relative.startsWith("..") && !path.isAbsolute(relative)
-          );
-        })
-        .map((triggerRow) => triggerRow.data.id),
+      actors: (actorsBySceneFolderLookup[sceneDir] ?? []).map(
+        (actorRow) => actorRow.data.id
+      ),
+      triggers: (triggersBySceneFolderLookup[sceneDir] ?? []).map(
+        (triggerRow) => triggerRow.data.id
+      ),
     });
   });
 
+  console.timeEnd("loadProjectData.loadProject build sceneResources");
+
+  console.time("loadProjectData.loadProject build actorResources");
   const actorResources = (resourcesLookup.actor ?? []).map((row) =>
     addMissingEntityId(row.data)
   );
+  console.timeEnd("loadProjectData.loadProject build actorResources");
 
+  console.time("loadProjectData.loadProject build triggerResources");
   const triggerResources = (resourcesLookup.trigger ?? []).map((row) =>
     addMissingEntityId(row.data)
   );
+  console.timeEnd("loadProjectData.loadProject build triggerResources");
 
+  console.time("loadProjectData.loadProject build scriptResources");
   const scriptResources = (resourcesLookup.script ?? []).map((row) =>
     addMissingEntityId(row.data)
   );
+  console.timeEnd("loadProjectData.loadProject build scriptResources");
 
   const mergeAssetsWithResources = <
     R extends Asset & { name: string },
@@ -550,8 +243,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   >(
     assets: A[],
     resources: {
-      path: string;
-      type: string;
+      // path: string;
+      // type: string;
       data: R;
     }[],
     mergeFn: (asset: A, resource: R | undefined) => R
@@ -572,8 +265,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   >(
     assets: A[],
     resources: {
-      path: string;
-      type: string;
+      // path: string;
+      // type: string;
       data: A & { _resourceType: B };
     }[],
     resourceType: B
@@ -593,8 +286,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   >(
     assets: A[],
     resources: {
-      path: string;
-      type: string;
+      // path: string;
+      // type: string;
       data: A & { _resourceType: B };
     }[],
     resourceType: B
@@ -609,6 +302,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     });
   };
 
+  console.time("loadProjectData.loadProject build backgroundResources");
   const backgroundResources = mergeAssetsWithResources<
     CompressedBackgroundResource,
     BackgroundAssetData
@@ -631,7 +325,9 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       tileColors: "",
     };
   });
+  console.timeEnd("loadProjectData.loadProject build backgroundResources");
 
+  console.time("loadProjectData.loadProject build spriteResources");
   const spriteResources = mergeAssetsWithResources<
     SpriteResource,
     SpriteAssetData
@@ -680,37 +376,49 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       }),
     } as SpriteResource;
   });
+  console.timeEnd("loadProjectData.loadProject build spriteResources");
 
+  console.time("loadProjectData.loadProject build emoteResources");
   const emoteResources = mergeAssetIdAndSymbolsWithResources(
     emotes,
     resourcesLookup.emote,
     "emote"
   );
+  console.timeEnd("loadProjectData.loadProject build emoteResources");
 
+  console.time("loadProjectData.loadProject build avatarResources");
   const avatarResources = mergeAssetIdsWithResources(
     avatars,
     resourcesLookup.avatar,
     "avatar"
   );
+  console.timeEnd("loadProjectData.loadProject build avatarResources");
 
+  console.time("loadProjectData.loadProject build tilesetResources");
   const tilesetResources = mergeAssetIdAndSymbolsWithResources(
     tilesets,
     resourcesLookup.tileset,
     "tileset"
   );
+  console.timeEnd("loadProjectData.loadProject build tilesetResources");
 
+  console.time("loadProjectData.loadProject build soundResources");
   const soundResources = mergeAssetIdAndSymbolsWithResources(
     sounds,
     resourcesLookup.sound,
     "sound"
   );
+  console.timeEnd("loadProjectData.loadProject build soundResources");
 
+  console.time("loadProjectData.loadProject build fontResources");
   const fontResources = mergeAssetIdAndSymbolsWithResources(
     fonts,
     resourcesLookup.font,
     "font"
   );
+  console.timeEnd("loadProjectData.loadProject build fontResources");
 
+  console.time("loadProjectData.loadProject build musicResources");
   const musicResources = mergeAssetsWithResources<
     MusicResource,
     MusicAssetData
@@ -732,7 +440,9 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       settings: {},
     };
   });
+  console.timeEnd("loadProjectData.loadProject build musicResources");
 
+  console.time("loadProjectData.loadProject build paletteResources");
   const paletteResources: PaletteResource[] = (
     resourcesLookup.palette ?? []
   ).map((row) => addMissingEntityId(row.data));
@@ -740,7 +450,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   // Add any missing default palettes
   for (let i = 0; i < defaultPalettes.length; i++) {
     const defaultPalette = defaultPalettes[i];
-    const existingPalette = fixedPalettes.find(
+    const existingPalette = paletteResources.find(
       (p) => p.id === defaultPalette.id
     );
     if (existingPalette) {
@@ -755,13 +465,21 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       });
     }
   }
+  console.timeEnd("loadProjectData.loadProject build paletteResources");
 
+  console.time("loadProjectData.loadProject build variablesResource");
   const variablesResource: VariablesResource = (resourcesLookup.variables ??
     [])[0].data;
+  console.timeEnd("loadProjectData.loadProject build variablesResource");
 
+  console.time("loadProjectData.loadProject build engineFieldValuesResource");
   const engineFieldValuesResource: EngineFieldValuesResource =
     (resourcesLookup.engineFieldValues ?? [])[0].data;
+  console.timeEnd(
+    "loadProjectData.loadProject build engineFieldValuesResource"
+  );
 
+  console.time("loadProjectData.loadProject build settingsResource");
   const settingsResource: SettingsResource = (
     resourcesLookup.settings ?? []
   ).reduce(
@@ -773,23 +491,9 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     },
     { _resourceType: "settings", ...defaultProjectSettings }
   );
+  console.timeEnd("loadProjectData.loadProject build settingsResource");
 
   return {
-    data: {
-      ...json,
-      backgrounds: fixedBackgroundIds,
-      spriteSheets: fixedSpriteIds,
-      music: fixedMusicIds,
-      sounds: fixedSoundIds,
-      fonts: fixedFontIds,
-      avatars: fixedAvatarIds,
-      emotes: fixedEmoteIds,
-      tilesets: fixedTilesetIds,
-      scenes: fixedScenes,
-      customEvents: fixedCustomEvents,
-      palettes: fixedPalettes,
-      engineFieldValues: fixedEngineFieldValues,
-    },
     resources: {
       scenes: sceneResources,
       actors: actorResources,
@@ -807,6 +511,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       variables: variablesResource,
       engineFieldValues: engineFieldValuesResource,
       settings: settingsResource,
+      metadata: originalJson,
     },
     modifiedSpriteIds,
     isMigrated,

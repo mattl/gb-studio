@@ -71,7 +71,6 @@ import {
   Tileset,
 } from "shared/lib/entities/entitiesTypes";
 import {
-  normalizeEntities,
   sortByFilename,
   genEntitySymbol,
   ensureSymbolsUnique,

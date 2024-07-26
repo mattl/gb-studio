@@ -17,7 +17,14 @@ import type {
 } from "shared/lib/entities/entitiesTypes";
 import type { SettingsState } from "store/features/settings/settingsState";
 
-// type ProjectResourceType = "scene" | "actor" | "trigger";
+export type ProjectMetadataResource = {
+  _resourceType: "project";
+  name: string;
+  author: string;
+  notes: string;
+  _version: string;
+  _release: string;
+};
 
 export type CompressedSceneResource = Omit<
   Scene,
@@ -126,6 +133,7 @@ export type CompressedProjectResources = {
   variables: VariablesResource;
   engineFieldValues: EngineFieldValuesResource;
   settings: SettingsResource;
+  metadata: ProjectMetadataResource;
 };
 
 export type ProjectResources = Omit<

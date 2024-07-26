@@ -75,7 +75,9 @@ import { Asset, AssetType, assetFilename } from "shared/lib/helpers/assets";
 import toArrayBuffer from "lib/helpers/toArrayBuffer";
 import { AssetFolder, potentialAssetFolders } from "lib/project/assets";
 import confirmAssetFolder from "lib/electron/dialog/confirmAssetFolder";
-import loadProjectData from "lib/project/loadProjectData";
+import loadProjectData, {
+  LoadProjectResult,
+} from "lib/project/loadProjectData";
 import saveProjectData from "lib/project/saveProjectData";
 import migrateWarning from "lib/project/migrateWarning";
 import confirmReplaceCustomEvent from "lib/electron/dialog/confirmReplaceCustomEvent";
@@ -1189,11 +1191,7 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle("project:load", async (): Promise<{
-  data: ProjectData;
-  modifiedSpriteIds: string[];
-  isMigrated: boolean;
-}> => {
+ipcMain.handle("project:load", async (): Promise<LoadProjectResult> => {
   console.time("handle project:load");
   const data = await loadProjectData(projectPath);
   console.timeEnd("handle project:load");

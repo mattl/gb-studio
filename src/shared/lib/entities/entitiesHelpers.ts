@@ -255,15 +255,6 @@ const resourcesSchema = {
   engineFieldValues: engineFieldValuesResourceSchema,
 };
 
-export const normalizeEntities = (
-  projectData: ProjectEntitiesData
-): NormalizedData => {
-  return normalize<NormalizedEntities, NormalizedResult>(
-    projectData,
-    projectSchema
-  ) as unknown as NormalizedData;
-};
-
 export const normalizeEntityResources = (
   projectResources: ProjectResources
 ): NormalizedData2 => {

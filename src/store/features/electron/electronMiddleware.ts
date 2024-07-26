@@ -63,7 +63,7 @@ const electronMiddleware: Middleware<Dispatch, RootState> =
         return;
       }
     } else if (projectActions.loadProject.fulfilled.match(action)) {
-      API.project.updateProjectWindowMenu(action.payload.data.settings);
+      API.project.updateProjectWindowMenu(action.payload.resources.settings);
     } else if (settingsActions.setShowNavigator.match(action)) {
       const state = store.getState();
       const projectSettings = getSettings(state);
