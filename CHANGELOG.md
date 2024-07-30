@@ -7,9 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Tilesets asset folder added to all sample projects  [@pau-tomas](https://github.com/pau-tomas)
+
+### Changed
+
+- Update to latest [GBVM](https://github.com/chrismaltby/gbvm)
+
+## [4.0.2] - 2024-07-29
+
+### Changed
+
+- Optimised loading of large projects by upgrading to newer version of Normalizr
+- Improved text contrast on world status bar (info for current scene + x/y coordinate of hovered tile)
+
 ### Fixed
 
-- Fixed spell check to use chosen application language where possible
+- Fix spell check to use chosen application language where possible
+- Fix stack error preventing use of rnd() within "if" statements
+- Fix 'wait for input' text code responsiveness when using slower text speeds
+- Fix inconsistent draw speeds when using "Set Text Animation Speed" (Speed 4 would alternate between fast and slow)
 
 ## [4.0.1] - 2024-07-22
 
