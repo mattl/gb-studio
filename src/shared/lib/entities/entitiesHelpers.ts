@@ -778,7 +778,6 @@ export const renameAssetEntity = <
     inode: string;
     filename: string;
     name: string;
-    __dirty?: boolean;
   }
 >(
   entities: EntityState<T>,
@@ -797,15 +796,12 @@ export const renameAssetEntity = <
       changes: {
         filename: newFilename,
         name: assetNameFromFilename(newFilename),
-        __dirty: true,
       } as Partial<T>,
     });
   }
 };
 
-export const updateEntitySymbol = <
-  T extends { id: string; symbol?: string; __dirty?: boolean }
->(
+export const updateEntitySymbol = <T extends { id: string; symbol?: string }>(
   state: EntitiesState,
   entities: EntityState<T>,
   adapter: EntityAdapter<T>,
@@ -820,7 +816,6 @@ export const updateEntitySymbol = <
   const symbol = genEntitySymbol(state, inputSymbol);
   const changes = {
     symbol,
-    __dirty: true,
   } as Partial<T>;
   adapter.updateOne(entities, {
     id,

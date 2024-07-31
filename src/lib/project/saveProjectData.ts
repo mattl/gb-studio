@@ -21,7 +21,6 @@ export const encodeResource = <T extends Record<string, unknown>>(
     // Extract id so it can be moved to top of data
     id,
     // Remove internal data so it isn't stored to disk
-    __dirty,
     __type,
     // Extract remaining data to write to disk
     ...rest

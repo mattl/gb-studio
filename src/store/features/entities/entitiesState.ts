@@ -502,7 +502,6 @@ const loadDetectedSprite: CaseReducer<
     changes: {
       ...action.payload.changes,
       states: numStates === 0 ? [action.payload.state.id] : spriteSheet.states,
-      __dirty: true,
     },
   });
 };
@@ -534,7 +533,6 @@ const editMusicSettings: CaseReducer<
           ...music.settings,
           ...action.payload.changes,
         },
-        __dirty: true,
       },
     });
   }
@@ -812,7 +810,6 @@ const addScene: CaseReducer<
     playerHit1Script: [],
     playerHit2Script: [],
     playerHit3Script: [],
-    __dirty: true,
   };
 
   scenesAdapter.addOne(state.scenes, newScene);
@@ -848,7 +845,6 @@ const moveScene: CaseReducer<
     // Move scene
     scene.x = newX;
     scene.y = newY;
-    scene.__dirty = true;
 
     // Move additionally selected scenes by same amount
     for (const additionalSceneId of action.payload.additionalSceneIds) {
@@ -873,7 +869,7 @@ const editScene: CaseReducer<
   PayloadAction<{ sceneId: string; changes: Partial<SceneNormalized> }>
 > = (state, action) => {
   const scene = state.scenes.entities[action.payload.sceneId];
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!scene) {
     return;
@@ -920,7 +916,7 @@ const editScene: CaseReducer<
           if (actor.x !== x || actor.y !== y) {
             actorsAdapter.updateOne(state.actors, {
               id: actor.id,
-              changes: { x, y, __dirty: true },
+              changes: { x, y },
             });
           }
         }
@@ -941,7 +937,7 @@ const editScene: CaseReducer<
           ) {
             triggersAdapter.updateOne(state.triggers, {
               id: trigger.id,
-              changes: { x, y, width, height, __dirty: true },
+              changes: { x, y, width, height },
             });
           }
         }
@@ -1055,7 +1051,6 @@ const addActor: CaseReducer<
     id: action.payload.actorId,
     x: clamp(action.payload.x, 0, scene.width - 2),
     y: clamp(action.payload.y, 0, scene.height - 1),
-    __dirty: true,
   };
 
   // Add to scene
@@ -1068,7 +1063,7 @@ const editActor: CaseReducer<
   PayloadAction<{ actorId: string; changes: Partial<ActorNormalized> }>
 > = (state, action) => {
   const actor = localActorSelectors.selectById(state, action.payload.actorId);
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!actor) {
     return;
@@ -1127,7 +1122,6 @@ const moveActor: CaseReducer<
         actors: prevScene.actors.filter((actorId) => {
           return actorId !== action.payload.actorId;
         }),
-        __dirty: true,
       },
     });
 
@@ -1139,7 +1133,6 @@ const moveActor: CaseReducer<
           newScene.actors,
           action.payload.actorId
         ),
-        __dirty: true,
       },
     });
   }
@@ -1149,7 +1142,6 @@ const moveActor: CaseReducer<
     changes: {
       x: clamp(action.payload.x, 0, newScene.width - 2),
       y: clamp(action.payload.y, 0, newScene.height - 1),
-      __dirty: true,
     },
   });
 };
@@ -1173,7 +1165,6 @@ const removeActor: CaseReducer<
       actors: scene.actors.filter((actorId) => {
         return actorId !== action.payload.actorId;
       }),
-      __dirty: true,
     },
   });
 
@@ -1210,7 +1201,6 @@ const removeActorAt: CaseReducer<
         actors: scene.actors.filter((actorId) => {
           return actorId !== removeActorId;
         }),
-        __dirty: true,
       },
     });
     // Remove actor
@@ -1253,7 +1243,6 @@ const addTrigger: CaseReducer<
     height,
     script: [],
     leaveScript: [],
-    __dirty: true,
   };
 
   // Add to scene
@@ -1265,7 +1254,7 @@ const editTrigger: CaseReducer<
   EntitiesState,
   PayloadAction<{ triggerId: string; changes: Partial<TriggerNormalized> }>
 > = (state, action) => {
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   triggersAdapter.updateOne(state.triggers, {
     id: action.payload.triggerId,
@@ -1328,7 +1317,6 @@ const moveTrigger: CaseReducer<
         triggers: prevScene.triggers.filter((triggerId) => {
           return triggerId !== action.payload.triggerId;
         }),
-        __dirty: true,
       },
     });
 
@@ -1340,7 +1328,6 @@ const moveTrigger: CaseReducer<
           newScene.triggers,
           action.payload.triggerId
         ),
-        __dirty: true,
       },
     });
   }
@@ -1350,7 +1337,6 @@ const moveTrigger: CaseReducer<
     changes: {
       x: clamp(action.payload.x, 0, newScene.width - trigger.width),
       y: clamp(action.payload.y, 0, newScene.height - trigger.height),
-      __dirty: true,
     },
   });
 };
@@ -1372,7 +1358,6 @@ const resizeTrigger: CaseReducer<
       y: Math.min(action.payload.y, action.payload.startY),
       width: Math.abs(action.payload.x - action.payload.startX) + 1,
       height: Math.abs(action.payload.y - action.payload.startY) + 1,
-      __dirty: true,
     },
   });
 };
@@ -1396,7 +1381,6 @@ const removeTrigger: CaseReducer<
       triggers: scene.triggers.filter((triggerId) => {
         return triggerId !== action.payload.triggerId;
       }),
-      __dirty: true,
     },
   });
 
@@ -1434,7 +1418,6 @@ const removeTriggerAt: CaseReducer<
         triggers: scene.triggers.filter((triggerId) => {
           return triggerId !== removeTriggerId;
         }),
-        __dirty: true,
       },
     });
 
@@ -1472,7 +1455,6 @@ const editBackgroundAutoColor: CaseReducer<
       id: background.id,
       changes: {
         autoColor: action.payload.autoColor,
-        __dirty: true,
       },
     });
   }
@@ -1502,7 +1484,7 @@ const editSpriteSheet: CaseReducer<
   }>
 > = (state, action) => {
   const spriteSheet = state.spriteSheets.entities[action.payload.spriteSheetId];
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!spriteSheet) {
     return;
@@ -1627,9 +1609,7 @@ const sendMetaspriteTilesToFront: CaseReducer<
   });
   spriteSheetsAdapter.updateOne(state.spriteSheets, {
     id: action.payload.spriteSheetId,
-    changes: {
-      __dirty: true,
-    },
+    changes: {},
   });
 };
 
@@ -1662,9 +1642,7 @@ const sendMetaspriteTilesToBack: CaseReducer<
   });
   spriteSheetsAdapter.updateOne(state.spriteSheets, {
     id: action.payload.spriteSheetId,
-    changes: {
-      __dirty: true,
-    },
+    changes: {},
   });
 };
 
@@ -1689,9 +1667,7 @@ const removeMetasprite: CaseReducer<
     });
     spriteSheetsAdapter.updateOne(state.spriteSheets, {
       id: action.payload.spriteSheetId,
-      changes: {
-        __dirty: true,
-      },
+      changes: {},
     });
     return;
   }
@@ -1767,7 +1743,6 @@ const moveMetaspriteTiles: CaseReducer<
     if (tile) {
       tile.x = x;
       tile.y = y;
-      tile.__dirty = true;
     }
   });
 };
@@ -1789,7 +1764,6 @@ const moveMetaspriteTilesRelative: CaseReducer<
     if (tile) {
       tile.x += action.payload.x;
       tile.y += action.payload.y;
-      tile.__dirty = true;
     }
   });
 };
@@ -1825,7 +1799,6 @@ const flipXMetaspriteTiles: CaseReducer<
       const middleX = tile.x + 4;
       const flippedMiddleX = mirrorX + (mirrorX - middleX);
       tile.x = flippedMiddleX - 4;
-      tile.__dirty = true;
     }
   });
 };
@@ -1861,7 +1834,6 @@ const flipYMetaspriteTiles: CaseReducer<
       const middleY = tile.y + 8;
       const flippedMiddleY = mirrorY + (mirrorY - middleY);
       tile.y = flippedMiddleY - 8;
-      tile.__dirty = true;
     }
   });
 };
@@ -1876,7 +1848,7 @@ const editMetaspriteTile: CaseReducer<
 > = (state, action) => {
   const metaspriteTile =
     state.metaspriteTiles.entities[action.payload.metaspriteTileId];
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!metaspriteTile) {
     return;
@@ -1900,7 +1872,7 @@ const editMetaspriteTiles: CaseReducer<
     state.metaspriteTiles,
     action.payload.metaspriteTileIds.map((id) => ({
       id,
-      changes: { ...action.payload.changes, __dirty: true },
+      changes: { ...action.payload.changes },
     }))
   );
 };
@@ -1922,7 +1894,6 @@ const removeMetaspriteTiles: CaseReducer<
   metasprite.tiles = metasprite.tiles.filter(
     (tileId) => !action.payload.metaspriteTileIds.includes(tileId)
   );
-  metasprite.__dirty = true;
 
   metaspriteTilesAdapter.removeMany(
     state.metaspriteTiles,
@@ -1963,7 +1934,6 @@ const removeMetaspriteTilesOutsideCanvas: CaseReducer<
   metasprite.tiles = metasprite.tiles.filter(
     (tileId) => !removeMetaspriteTiles.includes(tileId)
   );
-  metasprite.__dirty = true;
 
   metaspriteTilesAdapter.removeMany(
     state.metaspriteTiles,
@@ -1985,7 +1955,7 @@ const editSpriteAnimation: CaseReducer<
 > = (state, action) => {
   const spriteAnimation =
     state.spriteAnimations.entities[action.payload.spriteAnimationId];
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!spriteAnimation) {
     return;
@@ -2027,9 +1997,7 @@ const moveSpriteAnimationFrame: CaseReducer<
   });
   spriteSheetsAdapter.updateOne(state.spriteSheets, {
     id: action.payload.spriteSheetId,
-    changes: {
-      __dirty: true,
-    },
+    changes: {},
   });
 };
 
@@ -2085,7 +2053,7 @@ const editSpriteState: CaseReducer<
 > = (state, action) => {
   const spriteState = state.spriteStates.entities[action.payload.spriteStateId];
 
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   if (!spriteState) {
     return;
@@ -2119,7 +2087,6 @@ const removeSpriteState: CaseReducer<
       states: spriteSheet.states.filter((spriteStateId) => {
         return spriteStateId !== action.payload.spriteStateId;
       }),
-      __dirty: true,
     },
   });
 
@@ -2248,7 +2215,6 @@ const paintCollision: CaseReducer<
     id: action.payload.sceneId,
     changes: {
       collisions,
-      __dirty: true,
     },
   });
 };
@@ -2390,7 +2356,6 @@ const paintSlopeCollision: CaseReducer<
     id: action.payload.sceneId,
     changes: {
       collisions,
-      __dirty: true,
     },
   });
 };
@@ -2504,7 +2469,6 @@ const paintColor: CaseReducer<
     id: action.payload.backgroundId,
     changes: {
       tileColors,
-      __dirty: true,
     },
   });
 };
@@ -2585,7 +2549,7 @@ const editPalette: CaseReducer<
   EntitiesState,
   PayloadAction<{ paletteId: string; changes: Partial<Palette> }>
 > = (state, action) => {
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
 
   palettesAdapter.updateOne(state.palettes, {
     id: action.payload.paletteId,
@@ -2632,7 +2596,7 @@ const editCustomEvent: CaseReducer<
     changes: Partial<CustomEventNormalized>;
   }>
 > = (state, action) => {
-  const patch = { ...action.payload.changes, __dirty: true };
+  const patch = { ...action.payload.changes };
   customEventsAdapter.updateOne(state.customEvents, {
     id: action.payload.customEventId,
     changes: patch,
@@ -2786,7 +2750,6 @@ const addScriptEvents: CaseReducer<
         ...scriptEventData,
         id: action.payload.scriptEventIds[scriptEventIndex],
         symbol: undefined,
-        __dirty: true,
       };
       if (scriptEventData.children) {
         newScriptEvent.children = Object.keys(scriptEventData.children).reduce(
@@ -2877,7 +2840,7 @@ const editScriptEvent: CaseReducer<
 > = (state, action) => {
   scriptEventsAdapter.updateOne(state.scriptEvents, {
     id: action.payload.scriptEventId,
-    changes: { ...action.payload.changes, __dirty: true },
+    changes: { ...action.payload.changes },
   });
 };
 
@@ -2957,7 +2920,6 @@ const editScriptEventArg: CaseReducer<
     return;
   }
   scriptEvent.args[action.payload.key] = action.payload.value;
-  scriptEvent.__dirty = true;
 };
 
 const editScriptEventDestination: CaseReducer<
@@ -2984,7 +2946,6 @@ const editScriptEventDestination: CaseReducer<
       ? { type: "number", value: action.payload.y }
       : scriptEvent.args.y,
   };
-  scriptEvent.__dirty = true;
 };
 
 const editScriptEventLabel: CaseReducer<
@@ -2999,7 +2960,6 @@ const editScriptEventLabel: CaseReducer<
     return;
   }
   scriptEvent.args.__label = action.payload.value;
-  scriptEvent.__dirty = true;
 };
 
 const groupScriptEvents: CaseReducer<

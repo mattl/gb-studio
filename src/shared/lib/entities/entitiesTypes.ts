@@ -52,7 +52,6 @@ export type ScriptEvent = {
   symbol?: string;
   args?: ScriptEventArgs;
   children?: Dictionary<ScriptEvent[]>;
-  __dirty?: boolean;
 };
 
 export type ScriptEventNormalized = Omit<ScriptEvent, "children"> & {
@@ -116,7 +115,6 @@ export type ActorNormalized = Omit<
   hit1Script: string[];
   hit2Script: string[];
   hit3Script: string[];
-  __dirty?: boolean;
 };
 
 export const triggerScriptKeys = ["script", "leaveScript"] as const;
@@ -138,7 +136,6 @@ export type Trigger = {
 export type TriggerNormalized = Omit<Trigger, "script" | "leaveScript"> & {
   script: string[];
   leaveScript: string[];
-  __dirty?: boolean;
 };
 
 export type Background = {
@@ -156,7 +153,6 @@ export type Background = {
   plugin?: string;
   inode: string;
   _v: number;
-  __dirty?: boolean;
 };
 
 export type BackgroundData = Omit<Background, "_v" | "inode">;
@@ -172,7 +168,6 @@ export type Font = {
   inode: string;
   mapping: Record<string, number>;
   _v: number;
-  __dirty?: boolean;
 };
 
 export type FontData = Omit<Font, "mapping" | "_v" | "inode">;
@@ -186,7 +181,6 @@ export type Avatar = {
   plugin?: string;
   inode: string;
   _v: number;
-  __dirty?: boolean;
 };
 
 export type AvatarData = Omit<Avatar, "_v" | "inode">;
@@ -201,7 +195,6 @@ export type Emote = {
   plugin?: string;
   inode: string;
   _v: number;
-  __dirty?: boolean;
 };
 
 export type EmoteData = Omit<Emote, "_v" | "inode">;
@@ -220,7 +213,6 @@ export type Music = {
   type?: string;
   inode: string;
   _v: number;
-  __dirty?: boolean;
 };
 
 export type MusicData = Omit<Music, "_v" | "inode">;
@@ -312,13 +304,11 @@ export type MetaspriteTile = {
   objPalette: ObjPalette;
   paletteIndex: number;
   priority: boolean;
-  __dirty?: boolean;
 };
 
 export type Metasprite = {
   id: string;
   tiles: string[];
-  __dirty?: boolean;
 };
 
 export type MetaspriteData = Omit<Metasprite, "tiles"> & {
@@ -366,7 +356,6 @@ export type SpriteSheet = {
   boundsHeight: number;
   animSpeed: number | null;
   states: SpriteStateData[];
-  __dirty?: boolean;
 };
 
 export type SpriteSheetNormalized = Omit<SpriteSheet, "states"> & {
@@ -431,7 +420,6 @@ export type SceneNormalized = Omit<
   playerHit1Script: string[];
   playerHit2Script: string[];
   playerHit3Script: string[];
-  __dirty?: boolean;
 };
 
 export type ProjectEntitiesData = {
