@@ -4,9 +4,9 @@ import {
   CompressedResource,
 } from "shared/lib/resources/types";
 
-const stripDirtyResource = (obj: any): any | undefined => {
+const stripDirtyResource = <T>(obj: T): T | undefined => {
   let foundDirty = false;
-  function deepClean<T>(obj: T): T {
+  function deepClean(obj: any): T {
     if (obj !== null && typeof obj === "object") {
       for (const key in obj) {
         if (obj.hasOwnProperty(key)) {
