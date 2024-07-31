@@ -318,6 +318,7 @@ export type MetaspriteTile = {
 export type Metasprite = {
   id: string;
   tiles: string[];
+  __dirty?: boolean;
 };
 
 export type MetaspriteData = Omit<Metasprite, "tiles"> & {

@@ -1825,6 +1825,7 @@ const flipXMetaspriteTiles: CaseReducer<
       const middleX = tile.x + 4;
       const flippedMiddleX = mirrorX + (mirrorX - middleX);
       tile.x = flippedMiddleX - 4;
+      tile.__dirty = true;
     }
   });
 };
@@ -1860,6 +1861,7 @@ const flipYMetaspriteTiles: CaseReducer<
       const middleY = tile.y + 8;
       const flippedMiddleY = mirrorY + (mirrorY - middleY);
       tile.y = flippedMiddleY - 8;
+      tile.__dirty = true;
     }
   });
 };
@@ -1898,7 +1900,7 @@ const editMetaspriteTiles: CaseReducer<
     state.metaspriteTiles,
     action.payload.metaspriteTileIds.map((id) => ({
       id,
-      changes: action.payload.changes,
+      changes: { ...action.payload.changes, __dirty: true },
     }))
   );
 };
@@ -1920,6 +1922,7 @@ const removeMetaspriteTiles: CaseReducer<
   metasprite.tiles = metasprite.tiles.filter(
     (tileId) => !action.payload.metaspriteTileIds.includes(tileId)
   );
+  metasprite.__dirty = true;
 
   metaspriteTilesAdapter.removeMany(
     state.metaspriteTiles,
@@ -1960,6 +1963,7 @@ const removeMetaspriteTilesOutsideCanvas: CaseReducer<
   metasprite.tiles = metasprite.tiles.filter(
     (tileId) => !removeMetaspriteTiles.includes(tileId)
   );
+  metasprite.__dirty = true;
 
   metaspriteTilesAdapter.removeMany(
     state.metaspriteTiles,
