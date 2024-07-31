@@ -345,7 +345,7 @@ const saveProjectData = async (
   console.timeEnd("Flush Write Buffer");
 
   await writeFileWithBackupAsync(
-    projectResFilename,
+    projectPath,
     encodeResource("project", projectResources.metadata)
   );
 
