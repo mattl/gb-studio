@@ -165,8 +165,6 @@ const saveProjectData = async (
     }
   };
 
-  const actorsLookup = keyBy(projectResources.actors, "id");
-  const triggersLookup = keyBy(projectResources.triggers, "id");
 
   let sceneIndex = 0;
   for (const scene of projectResources.scenes) {
@@ -180,8 +178,7 @@ const saveProjectData = async (
 
     if (scene.actors.length > 0) {
       let actorIndex = 0;
-      for (const actorId of scene.actors) {
-        const actor = actorsLookup[actorId];
+      for (const actor of scene.actors) {
         if (actor) {
           const actorFilename = Path.join(
             actorsFolder,
@@ -198,8 +195,7 @@ const saveProjectData = async (
 
     if (scene.triggers.length > 0) {
       let triggerIndex = 0;
-      for (const triggerId of scene.triggers) {
-        const trigger = triggersLookup[triggerId];
+      for (const trigger of scene.triggers) {
         if (trigger) {
           const triggerFilename = Path.join(
             triggersFolder,

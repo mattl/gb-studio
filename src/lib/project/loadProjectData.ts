@@ -221,28 +221,16 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     const sceneDir = path.posix.dirname(row.path);
     return addMissingEntityId({
       ...row.data,
-      actors: (actorsBySceneFolderLookup[sceneDir] ?? []).map(
-        (actorRow) => actorRow.data.id
+      actors: (actorsBySceneFolderLookup[sceneDir] ?? []).map((actorRow) =>
+        addMissingEntityId(actorRow.data)
       ),
       triggers: (triggersBySceneFolderLookup[sceneDir] ?? []).map(
-        (triggerRow) => triggerRow.data.id
+        (triggerRow) => addMissingEntityId(triggerRow.data)
       ),
     });
   });
 
   console.timeEnd("loadProjectData.loadProject build sceneResources");
-
-  console.time("loadProjectData.loadProject build actorResources");
-  const actorResources = (resourcesLookup.actor ?? []).map((row) =>
-    addMissingEntityId(row.data)
-  );
-  console.timeEnd("loadProjectData.loadProject build actorResources");
-
-  console.time("loadProjectData.loadProject build triggerResources");
-  const triggerResources = (resourcesLookup.trigger ?? []).map((row) =>
-    addMissingEntityId(row.data)
-  );
-  console.timeEnd("loadProjectData.loadProject build triggerResources");
 
   console.time("loadProjectData.loadProject build scriptResources");
   const scriptResources = (resourcesLookup.script ?? []).map((row) =>
@@ -509,8 +497,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   return {
     resources: {
       scenes: sceneResources,
-      actors: actorResources,
-      triggers: triggerResources,
+      // actors: actorResources,
+      // triggers: triggerResources,
       scripts: scriptResources,
       sprites: spriteResources,
       backgrounds: backgroundResources,

@@ -406,8 +406,8 @@ export type Scene = {
   autoFadeEventCollapse?: boolean;
   parallax?: SceneParallaxLayer[];
   playerSpriteSheetId?: string;
-  actors: string[];
-  triggers: string[];
+  actors: Actor[];
+  triggers: Trigger[];
   script: ScriptEvent[];
   playerHit1Script: ScriptEvent[];
   playerHit2Script: ScriptEvent[];

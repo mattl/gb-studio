@@ -2,7 +2,6 @@ import { normalize, denormalize, schema, NormalizedSchema } from "normalizr";
 import pick from "lodash/pick";
 import cloneDeep from "lodash/cloneDeep";
 import {
-  ProjectEntitiesData,
   EntitiesState,
   SpriteSheetNormalized,
   Metasprite,
@@ -65,10 +64,7 @@ import {
 } from "shared/lib/scriptValue/helpers";
 import { ScriptValue, isScriptValue } from "shared/lib/scriptValue/types";
 import { sortByKey } from "shared/lib/helpers/sortByKey";
-import {
-  ProjectEntityResources,
-  ProjectResources,
-} from "shared/lib/resources/types";
+import { ProjectEntityResources } from "shared/lib/resources/types";
 
 export interface NormalizedEntities {
   scenes: Record<EntityId, SceneNormalized>;
@@ -232,15 +228,12 @@ const variablesResourceSchema = new schema.Entity("variableResources", {
   variables: [variablesSchema],
 });
 const sceneSchema = new schema.Entity("scenes", {
-  // actors: [actorSchema],
-  // triggers: [triggerSchema],
+  actors: [actorSchema],
+  triggers: [triggerSchema],
   script: [scriptEventSchema],
   playerHit1Script: [scriptEventSchema],
   playerHit2Script: [scriptEventSchema],
   playerHit3Script: [scriptEventSchema],
-});
-const customEventsSchema = new schema.Entity("customEvents", {
-  script: [scriptEventSchema],
 });
 const scriptsSchema = new schema.Entity("scripts", {
   script: [scriptEventSchema],
@@ -253,22 +246,6 @@ const engineFieldValuesResourceSchema = new schema.Entity(
     engineFieldValues: [engineFieldValuesSchema],
   }
 );
-
-const projectSchema = {
-  scenes: [sceneSchema],
-  backgrounds: [backgroundSchema],
-  music: [musicSchema],
-  sounds: [soundSchema],
-  fonts: [fontSchema],
-  avatars: [avatarSchema],
-  emotes: [emoteSchema],
-  tilesets: [tilesetSchema],
-  spriteSheets: [spriteSheetsSchema],
-  variables: [variablesSchema],
-  customEvents: [customEventsSchema],
-  palettes: [palettesSchema],
-  engineFieldValues: [engineFieldValuesSchema],
-};
 
 const resourcesSchema = {
   scenes: [sceneSchema],
@@ -374,14 +351,16 @@ export const denormalizeEntities = (
     });
 
   const denormalizedEntityResources: ProjectEntityResources = {
-    scenes: denormalizedEntities.scenes.map(entityToResource("scene")),
-    actors: denormalizedEntities.actors.map((actor, actorIndex) => ({
-      ...entityToResource("actor")(actor),
-      _index: 0,
-    })),
-    triggers: denormalizedEntities.triggers.map((trigger, triggerIndex) => ({
-      ...entityToResource("trigger")(trigger),
-      _index: 0,
+    scenes: denormalizedEntities.scenes.map((scene) => ({
+      ...entityToResource("scene")(scene),
+      actors: scene.actors.map((actor, actorIndex) => ({
+        ...entityToResource("actor")(actor),
+        _index: actorIndex,
+      })),
+      triggers: scene.triggers.map((trigger, triggerIndex) => ({
+        ...entityToResource("trigger")(trigger),
+        _index: triggerIndex,
+      })),
     })),
     backgrounds: denormalizedEntities.backgrounds.map(
       entityToResource("background")

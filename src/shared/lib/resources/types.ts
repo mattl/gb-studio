@@ -26,6 +26,16 @@ export type ProjectMetadataResource = {
   _release: string;
 };
 
+export type ActorResource = Actor & {
+  _resourceType: "actor";
+  _index: number;
+};
+
+export type TriggerResource = Trigger & {
+  _resourceType: "trigger";
+  _index: number;
+};
+
 export type CompressedSceneResource = Omit<
   Scene,
   "collisions" | "actors" | "triggers"
@@ -35,8 +45,8 @@ export type CompressedSceneResource = Omit<
 };
 
 export type CompressedSceneResourceWithChildren = CompressedSceneResource & {
-  actors: string[];
-  triggers: string[];
+  actors: ActorResource[];
+  triggers: TriggerResource[];
 };
 
 export type SceneResource = Omit<
@@ -44,16 +54,6 @@ export type SceneResource = Omit<
   "collisions"
 > & {
   collisions: number[];
-};
-
-export type ActorResource = Actor & {
-  _resourceType: "actor";
-  _index: number;
-};
-
-export type TriggerResource = Trigger & {
-  _resourceType: "trigger";
-  _index: number;
 };
 
 export type ScriptResource = CustomEvent & {
@@ -123,8 +123,6 @@ export type EngineFieldValuesResource = {
 
 export type CompressedProjectResources = {
   scenes: CompressedSceneResourceWithChildren[];
-  actors: ActorResource[];
-  triggers: TriggerResource[];
   scripts: ScriptResource[];
   sprites: SpriteResource[];
   backgrounds: CompressedBackgroundResource[];
