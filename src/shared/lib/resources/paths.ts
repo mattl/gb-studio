@@ -153,16 +153,3 @@ export const getScriptResourcePath = (
     resourceTypeFolderLookup[script._resourceType],
     `${entityToFilePath(script, scriptName(script, scriptIndex))}.gbsres`
   );
-
-export const mapResourceAssetPaths = (arr: Resource[]): string[] =>
-  arr.map(getResourceAssetPath);
-
-export const mapSceneResourcePaths = (
-  arr: CompressedSceneResourceWithChildren[]
-): string[] => arr.map(getSceneResourcePaths).flat();
-
-export const mapPaletteResourcePaths = (arr: PaletteResource[]): string[] =>
-  arr.map(getPaletteResourcePath);
-
-export const mapScriptResourcePaths = (arr: ScriptResource[]): string[] =>
-  arr.map(getScriptResourcePath);
