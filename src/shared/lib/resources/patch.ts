@@ -1,8 +1,13 @@
 import {
   CompressedProjectResources,
   CompressedProjectResourcesPatch,
-  CompressedResource,
 } from "shared/lib/resources/types";
+import {
+  mapPaletteResourcePaths,
+  mapResourceAssetPaths,
+  mapSceneResourcePaths,
+  mapScriptResourcePaths,
+} from "./paths";
 
 const stripDirtyResource = <T>(obj: T): T | undefined => {
   let foundDirty = false;
@@ -53,8 +58,21 @@ export const buildCompressedProjectResourcesPatch = (
     settings: resources.settings,
     metadata: resources.metadata,
   };
+  const expectedPaths = [
+    ...mapSceneResourcePaths(resources.scenes),
+    ...mapResourceAssetPaths(resources.sprites),
+    ...mapResourceAssetPaths(resources.backgrounds),
+    ...mapResourceAssetPaths(resources.emotes),
+    ...mapResourceAssetPaths(resources.avatars),
+    ...mapResourceAssetPaths(resources.fonts),
+    ...mapResourceAssetPaths(resources.tilesets),
+    ...mapResourceAssetPaths(resources.sounds),
+    ...mapResourceAssetPaths(resources.music),
+    ...mapScriptResourcePaths(resources.scripts),
+    ...mapPaletteResourcePaths(resources.palettes),
+  ];
   return {
     data: dirtyResources,
-    paths: [],
+    paths: expectedPaths,
   };
 };

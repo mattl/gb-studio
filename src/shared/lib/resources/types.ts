@@ -138,6 +138,19 @@ export type CompressedResource =
   | SettingsResource
   | ProjectMetadataResource;
 
+export type Resource =
+  | BackgroundResource
+  | CompressedBackgroundResource
+  | SpriteResource
+  | EmoteResource
+  | AvatarResource
+  | FontResource
+  | TilesetResource
+  | SoundResource
+  | MusicResource
+  | PaletteResource
+  | ScriptResource;
+
 export type CompressedProjectResources = {
   scenes: CompressedSceneResourceWithChildren[];
   scripts: ScriptResource[];

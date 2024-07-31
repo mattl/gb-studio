@@ -7,7 +7,10 @@ import {
   SceneResource,
 } from "shared/lib/resources/types";
 
-export const compress8bitNumberArray = (arr: number[]): string => {
+export const compress8bitNumberArray = (arr: number[] | undefined): string => {
+  if (!arr) {
+    return "";
+  }
   let lastValue = -1;
   let output = "";
   let count = 0;
