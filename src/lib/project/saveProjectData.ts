@@ -15,7 +15,10 @@ import {
 import { stripInvalidPathCharacters } from "shared/lib/helpers/stripInvalidFilenameCharacters";
 import type { ProjectData } from "store/features/project/projectActions";
 import { compress8bitNumberArray } from "shared/lib/resources/compression";
-import { CompressedProjectResources } from "shared/lib/resources/types";
+import {
+  CompressedProjectResources,
+  CompressedProjectResourcesPatch,
+} from "shared/lib/resources/types";
 import keyBy from "lodash/keyBy";
 import promiseLimit from "lib/helpers/promiseLimit";
 
@@ -79,34 +82,14 @@ const triggerToFileName = (trigger: Entity, triggerIndex: number): string => {
     .replace(/\s+/g, "_")}__${trigger.id}`;
 };
 
-const deepCleanAndCheckDirty = <T>(
-  obj: T
-): { cleanedObject: T; foundDirty: boolean } => {
-  let foundDirty = false;
-  function deepClean(obj: any): any {
-    if (obj !== null && typeof obj === "object") {
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          if (key === "__dirty" && obj[key] === true) {
-            foundDirty = true;
-            delete obj[key];
-          } else {
-            deepClean(obj[key]);
-          }
-        }
-      }
-    }
-    return obj;
-  }
-  const cleanedObject = deepClean(JSON.parse(JSON.stringify(obj)));
-  return { cleanedObject, foundDirty };
-};
-
 const saveProjectData = async (
   projectPath: string,
-  projectResources: CompressedProjectResources
+  patch: CompressedProjectResourcesPatch
 ) => {
+  console.time("SAVING PROJECT");
   console.log("SAVE PROJECT DATA" + projectPath);
+
+  const projectResources = patch.data;
 
   // throw new Error("SAVING BLOCKED FOR NOW");
   const projectFolder = Path.dirname(projectPath);
@@ -130,6 +113,8 @@ const saveProjectData = async (
   const tilesetsFolder = Path.join("tilesets");
   const fontsFolder = Path.join("fonts");
 
+  console.time("SAVING PROJECT : existingResourcePaths");
+
   const existingPath = Path.join(projectPartsFolder, "**/*.gbsres");
   const existingResourcePaths = new Set(
     (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
@@ -137,10 +122,11 @@ const saveProjectData = async (
     )
   );
   const newResourcePaths: Set<string> = new Set();
+  console.timeEnd("SAVING PROJECT : existingResourcePaths");
 
   let forceWrite = true;
   if (await pathExists(projectPartsFolder)) {
-    await copy(projectPartsFolder, projectPartsBckFolder);
+    // await copy(projectPartsFolder, projectPartsBckFolder);
     forceWrite = false;
   }
 
@@ -153,19 +139,19 @@ const saveProjectData = async (
   ) => {
     newResourcePaths.add(filename);
 
-    const { foundDirty, cleanedObject } = deepCleanAndCheckDirty(resource);
+    // const { foundDirty, cleanedObject } = deepCleanAndCheckDirty(resource);
 
-    if (forceWrite || foundDirty || !existingResourcePaths.has(filename)) {
-      const filePath = Path.join(projectPartsFolder, filename);
-      await ensureDir(Path.dirname(filePath));
-      writeBuffer.push({
-        path: filePath,
-        data: encodeResource(resourceType, cleanedObject),
-      });
-    }
+    // if (forceWrite || foundDirty || !existingResourcePaths.has(filename)) {
+    const filePath = Path.join(projectPartsFolder, filename);
+    await ensureDir(Path.dirname(filePath));
+    writeBuffer.push({
+      path: filePath,
+      data: encodeResource(resourceType, resource),
+    });
+    // }
   };
 
-
+  console.time("SAVING PROJECT : build scene resources");
   let sceneIndex = 0;
   for (const scene of projectResources.scenes) {
     const sceneFolder = Path.join(
@@ -218,6 +204,9 @@ const saveProjectData = async (
     });
     sceneIndex++;
   }
+  console.timeEnd("SAVING PROJECT : build scene resources");
+
+  console.time("SAVING PROJECT : build background resources");
 
   let backgroundIndex = 0;
   for (const background of projectResources.backgrounds) {
@@ -228,6 +217,7 @@ const saveProjectData = async (
     await writeResource(backgroundFilename, "background", background);
     backgroundIndex++;
   }
+  console.timeEnd("SAVING PROJECT : build background resources");
 
   let spriteIndex = 0;
   for (const sprite of projectResources.sprites) {
@@ -366,13 +356,15 @@ const saveProjectData = async (
   // Remove previous project files that are no longer needed
   for (const path of resourceDiff) {
     const removePath = Path.join(projectPartsFolder, path);
-    await remove(removePath);
+    console.log("WANTING TO REMOVE...", removePath);
+    // await remove(removePath);
   }
 
   // await move(projectPartsTmpFolder, projectPartsFolder, { overwrite: true });
 
   // // Keep original save for now too
   // await writeFileWithBackupAsync(projectPath, JSON.stringify(project, null, 4));
+  console.timeEnd("SAVING PROJECT");
 };
 
 export default saveProjectData;

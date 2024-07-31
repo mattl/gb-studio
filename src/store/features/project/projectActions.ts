@@ -20,6 +20,7 @@ import { Asset, AssetType } from "shared/lib/helpers/assets";
 import type { LoadProjectResult } from "lib/project/loadProjectData";
 import { ProjectResources } from "shared/lib/resources/types";
 import { compressProjectResources } from "shared/lib/resources/compression";
+import { buildCompressedProjectResourcesPatch } from "shared/lib/resources/patch";
 
 let saving = false;
 
@@ -247,6 +248,8 @@ const removeSoundAsset = createAction<{ soundId: string }>(
 const saveProject = createAsyncThunk<void>(
   "project/saveProject",
   async (_, thunkApi) => {
+    console.log("SAVE PROJECT");
+    console.time("saveProject action PREPARE SAVE PROJECT");
     const state = thunkApi.getState() as RootState;
 
     if (!state.document.loaded) {
@@ -276,9 +279,19 @@ const saveProject = createAsyncThunk<void>(
         },
       });
       console.log({ compressedData: data });
+      console.timeEnd("saveProject action PREPARE SAVE PROJECT");
 
       // Save
-      await API.project.saveProject(data);
+      console.timeEnd("saveProject action PREPARE SAVE PROJECT");
+
+      console.time("saveProject action CREATE PATCH");
+      const patch = buildCompressedProjectResourcesPatch(data);
+      console.timeEnd("saveProject action CREATE PATCH");
+      console.log({ patch });
+      console.time("saveProject action SEND TO MAIN");
+
+      await API.project.saveProject(patch);
+      console.timeEnd("saveProject action SEND TO MAIN");
     } catch (e) {
       console.error(e);
     }

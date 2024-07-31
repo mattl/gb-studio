@@ -44,7 +44,7 @@ import type { TilesetAssetData } from "lib/project/loadTilesetData";
 import type { Asset, AssetType } from "shared/lib/helpers/assets";
 import type { Patrons } from "scripts/fetchPatrons";
 import type { LoadProjectResult } from "lib/project/loadProjectData";
-import { CompressedProjectResources } from "shared/lib/resources/types";
+import { CompressedProjectResourcesPatch } from "shared/lib/resources/types";
 
 interface L10NLookup {
   [key: string]: string | boolean | undefined;
@@ -236,7 +236,7 @@ const APISetup = {
       ipcRenderer.invoke("project:add-file", filename),
     loadProject: (): Promise<LoadProjectResult> =>
       ipcRenderer.invoke("project:load"),
-    saveProject: (data: CompressedProjectResources): Promise<void> =>
+    saveProject: (data: CompressedProjectResourcesPatch): Promise<void> =>
       ipcRenderer.invoke("project:save", data),
     setModified: () => ipcRenderer.invoke("project:set-modified"),
     setUnmodified: () => ipcRenderer.invoke("project:set-unmodified"),

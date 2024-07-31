@@ -121,6 +121,23 @@ export type EngineFieldValuesResource = {
   engineFieldValues: EngineFieldValue[];
 };
 
+export type CompressedResource =
+  | CompressedSceneResourceWithChildren
+  | ScriptResource
+  | SpriteResource
+  | CompressedBackgroundResource
+  | EmoteResource
+  | AvatarResource
+  | FontResource
+  | TilesetResource
+  | SoundResource
+  | MusicResource
+  | PaletteResource
+  | VariablesResource
+  | EngineFieldValuesResource
+  | SettingsResource
+  | ProjectMetadataResource;
+
 export type CompressedProjectResources = {
   scenes: CompressedSceneResourceWithChildren[];
   scripts: ScriptResource[];
@@ -151,3 +168,8 @@ export type ProjectEntityResources = Omit<
   ProjectResources,
   "settings" | "metadata"
 >;
+
+export type CompressedProjectResourcesPatch = {
+  data: CompressedProjectResources;
+  paths: string[];
+};
