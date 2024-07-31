@@ -312,6 +312,7 @@ export type MetaspriteTile = {
   objPalette: ObjPalette;
   paletteIndex: number;
   priority: boolean;
+  __dirty?: boolean;
 };
 
 export type Metasprite = {

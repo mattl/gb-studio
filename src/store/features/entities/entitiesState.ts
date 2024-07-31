@@ -1767,6 +1767,7 @@ const moveMetaspriteTiles: CaseReducer<
     if (tile) {
       tile.x = x;
       tile.y = y;
+      tile.__dirty = true;
     }
   });
 };
@@ -1788,6 +1789,7 @@ const moveMetaspriteTilesRelative: CaseReducer<
     if (tile) {
       tile.x += action.payload.x;
       tile.y += action.payload.y;
+      tile.__dirty = true;
     }
   });
 };
@@ -2242,6 +2244,7 @@ const paintCollision: CaseReducer<
     id: action.payload.sceneId,
     changes: {
       collisions,
+      __dirty: true,
     },
   });
 };
@@ -2383,6 +2386,7 @@ const paintSlopeCollision: CaseReducer<
     id: action.payload.sceneId,
     changes: {
       collisions,
+      __dirty: true,
     },
   });
 };
@@ -2496,6 +2500,7 @@ const paintColor: CaseReducer<
     id: action.payload.backgroundId,
     changes: {
       tileColors,
+      __dirty: true,
     },
   });
 };
@@ -2576,7 +2581,7 @@ const editPalette: CaseReducer<
   EntitiesState,
   PayloadAction<{ paletteId: string; changes: Partial<Palette> }>
 > = (state, action) => {
-  const patch = { ...action.payload.changes };
+  const patch = { ...action.payload.changes, __dirty: true };
 
   palettesAdapter.updateOne(state.palettes, {
     id: action.payload.paletteId,
@@ -2623,7 +2628,7 @@ const editCustomEvent: CaseReducer<
     changes: Partial<CustomEventNormalized>;
   }>
 > = (state, action) => {
-  const patch = { ...action.payload.changes };
+  const patch = { ...action.payload.changes, __dirty: true };
   customEventsAdapter.updateOne(state.customEvents, {
     id: action.payload.customEventId,
     changes: patch,
