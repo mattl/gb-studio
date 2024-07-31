@@ -284,6 +284,11 @@ const saveProject = createAsyncThunk<void>(
       // Save
       console.timeEnd("saveProject action PREPARE SAVE PROJECT");
 
+      console.time("saveProject action GET CHECKSUMS");
+      const resourceChecksums = await API.project.getResourceChecksums();
+      console.timeEnd("saveProject action GET CHECKSUMS");
+      console.log({ resourceChecksums });
+
       console.time("saveProject action CREATE PATCH");
       const patch = buildCompressedProjectResourcesPatch(data);
       console.timeEnd("saveProject action CREATE PATCH");

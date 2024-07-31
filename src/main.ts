@@ -118,6 +118,7 @@ import {
   CompressedProjectResourcesPatch,
 } from "shared/lib/resources/types";
 import { decompressProjectResources } from "shared/lib/resources/compression";
+import { loadProjectResourceChecksums } from "lib/project/loadResourceChecksums";
 
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -1209,6 +1210,12 @@ ipcMain.handle(
     await saveProjectData(projectPath, data);
   }
 );
+
+ipcMain.handle("project:get-resource-checksums", async (): Promise<
+  Record<string, string>
+> => {
+  return loadProjectResourceChecksums(projectPath);
+});
 
 ipcMain.handle(
   "project:build",

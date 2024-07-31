@@ -12,20 +12,20 @@ import { stripInvalidPathCharacters } from "shared/lib/helpers/stripInvalidFilen
 
 type Entity = { id: string; name: string };
 
-export const sceneName = (scene: Entity, sceneIndex: number) =>
-  scene.name || `Scene ${sceneIndex + 1}`;
+export const sceneName = (scene: Entity, _sceneIndex: number) =>
+  scene.name || `Scene`;
 
-export const actorName = (actor: Entity, actorIndex: number) =>
-  actor.name || `Actor ${actorIndex + 1}`;
+export const actorName = (actor: Entity, _actorIndex: number) =>
+  actor.name || `Actor`;
 
-export const triggerName = (trigger: Entity, triggerIndex: number) =>
-  trigger.name || `Trigger ${triggerIndex + 1}`;
+export const triggerName = (trigger: Entity, _triggerIndex: number) =>
+  trigger.name || `Trigger`;
 
-export const paletteName = (palette: Entity, paletteIndex: number) =>
-  palette.name || `Palette ${paletteIndex + 1}`;
+export const paletteName = (palette: Entity, _paletteIndex: number) =>
+  palette.name || `Palette`;
 
-export const scriptName = (script: Entity, scriptIndex: number) =>
-  script.name || `Script ${scriptIndex + 1}`;
+export const scriptName = (script: Entity, _scriptIndex: number) =>
+  script.name || `Script`;
 
 const entityToFilePath = (entity: Entity, nameOverride?: string): string => {
   const name = nameOverride || entity.name;

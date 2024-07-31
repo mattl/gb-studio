@@ -191,6 +191,8 @@ const APISetup = {
     openProjectPicker: () => ipcRenderer.invoke("project:open-project-picker"),
     openProject: (projectPath: string) =>
       ipcRenderer.invoke("project:open", { projectPath }),
+    getResourceChecksums: (): Promise<Record<string, string>> =>
+      ipcRenderer.invoke("project:get-resource-checksums"),
     createProject: (input: CreateProjectInput) =>
       ipcRenderer.invoke("create-project", input),
     updateProjectWindowMenu: (settings: SettingsState) =>
