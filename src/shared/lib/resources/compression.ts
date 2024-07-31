@@ -93,7 +93,7 @@ export const decompressProjectResources = (
   };
 };
 
-const compressSceneResource = (
+export const compressSceneResource = (
   scene: SceneResource
 ): CompressedSceneResourceWithChildren => {
   return {
@@ -102,7 +102,7 @@ const compressSceneResource = (
   };
 };
 
-const compressBackgroundResource = (
+export const compressBackgroundResource = (
   background: BackgroundResource
 ): CompressedBackgroundResource => {
   return {

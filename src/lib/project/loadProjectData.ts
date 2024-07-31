@@ -1,8 +1,6 @@
 import fs from "fs-extra";
 import path from "path";
 import uuid from "uuid/v4";
-import glob from "glob";
-import { promisify } from "util";
 import loadAllBackgroundData, {
   BackgroundAssetData,
 } from "./loadBackgroundData";
@@ -15,32 +13,32 @@ import loadAllSoundData from "./loadSoundData";
 import loadAllScriptEventHandlers, {
   ScriptEventDef,
 } from "./loadScriptEventHandlers";
-import migrateProject from "./migrateProject";
-import type { ProjectData } from "store/features/project/projectActions";
 import type {
   EngineFieldSchema,
   SceneTypeSchema,
 } from "store/features/engine/engineState";
 import type { Asset } from "shared/lib/helpers/assets";
 import keyBy from "lodash/keyBy";
-import groupBy from "lodash/groupBy";
 import { cloneDictionary } from "lib/helpers/clone";
 import { Dictionary } from "@reduxjs/toolkit";
 import { loadEngineFields } from "lib/project/engineFields";
 import { loadSceneTypes } from "lib/project/sceneTypes";
 import loadAllTilesetData from "lib/project/loadTilesetData";
-import promiseLimit from "lib/helpers/promiseLimit";
 import {
   CompressedBackgroundResource,
   CompressedProjectResources,
+  CompressedSceneResourceWithChildren,
   EngineFieldValuesResource,
   MusicResource,
   PaletteResource,
   SettingsResource,
   SpriteResource,
   VariablesResource,
+  isProjectMetadataResource,
 } from "shared/lib/resources/types";
-import { defaultPalettes, defaultProjectSettings } from "consts";
+import { defaultPalettes } from "consts";
+import { migrateLegacyProject } from "./migrateLegacyProject";
+import { loadProjectResources } from "./loadProjectResources";
 
 export interface LoadProjectResult {
   resources: CompressedProjectResources;
@@ -51,10 +49,6 @@ export interface LoadProjectResult {
   isMigrated: boolean;
 }
 
-const globAsync = promisify(glob);
-
-const CONCURRENT_RESOURCE_LOAD_COUNT = 8;
-
 const toUnixFilename = (filename: string) => {
   return filename.replace(/\\/g, "/");
 };
@@ -63,9 +57,9 @@ const toAssetFilename = (elem: Asset) => {
   return (elem.plugin ? `${elem.plugin}/` : "") + toUnixFilename(elem.filename);
 };
 
-const indexResourceByFilename = <T extends { data: Asset }>(
+const indexResourceByFilename = <T extends Asset>(
   arr: T[]
-): Record<string, T> => keyBy(arr || [], ({ data }) => toAssetFilename(data));
+): Record<string, T> => keyBy(arr || [], (data) => toAssetFilename(data));
 
 const sortByName = (a: { name: string }, b: { name: string }) => {
   const aName = a.name.toUpperCase();
@@ -79,52 +73,20 @@ const sortByName = (a: { name: string }, b: { name: string }) => {
   return 0;
 };
 
-const sortByIndex = (
-  a: { data: { _index: number } },
-  b: { data: { _index: number } }
-) => {
-  if (a.data._index < b.data._index) {
-    return -1;
-  }
-  if (a.data._index > b.data._index) {
-    return 1;
-  }
-  return 0;
-};
-
 const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const projectRoot = path.dirname(projectPath);
-
-  console.time("loadProjectData.loadProject globResources");
-  const projectResources = await globAsync(
-    path.join(projectRoot, "project", "**/*.gbsres")
-  );
-  console.timeEnd("loadProjectData.loadProject globResources");
-
-  console.time("loadProjectData.loadProject readResources2");
-  const resources = await promiseLimit(
-    CONCURRENT_RESOURCE_LOAD_COUNT,
-    projectResources.map((projectResourcePath) => async () => {
-      const resourceData = await fs.readJson(projectResourcePath);
-      return {
-        path: path
-          .relative(projectRoot, projectResourcePath)
-          .split(path.sep)
-          .join(path.posix.sep),
-        type: resourceData._resourceType,
-        data: resourceData,
-      };
-    })
-  );
-  console.timeEnd("loadProjectData.loadProject readResources2");
-
-  console.time("loadProjectData.loadProject build resourcesLookup");
-  const resourcesLookup = groupBy(resources, "type");
-  console.timeEnd("loadProjectData.loadProject build resourcesLookup");
 
   console.time("loadProjectData.loadProject scriptEventDefs");
   const scriptEventDefs = await loadAllScriptEventHandlers(projectRoot);
   console.timeEnd("loadProjectData.loadProject scriptEventDefs");
+
+  console.time("loadProjectData.loadProject readJson");
+  const originalJson = await fs.readJson(projectPath);
+  console.timeEnd("loadProjectData.loadProject readJson");
+
+  const resources = !isProjectMetadataResource(originalJson)
+    ? migrateLegacyProject(originalJson, projectRoot, scriptEventDefs)
+    : await loadProjectResources(projectRoot, originalJson);
 
   console.time("loadProjectData.loadProject engineFields");
   const engineFields = await loadEngineFields(projectRoot);
@@ -134,22 +96,11 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const sceneTypes = await loadSceneTypes(projectRoot);
   console.timeEnd("loadProjectData.loadProject sceneTypes");
 
-  console.time("loadProjectData.loadProject readJson");
-  const originalJson = await fs.readJson(projectPath);
-  console.timeEnd("loadProjectData.loadProject readJson");
-
   const { _version: originalVersion, _release: originalRelease } = originalJson;
 
-  console.time("loadProjectData.loadProject migrateProject");
-  const json = migrateProject(
-    originalJson,
-    projectRoot,
-    scriptEventDefs
-  ) as ProjectData;
-  console.timeEnd("loadProjectData.loadProject migrateProject");
-
   const isMigrated =
-    json._version !== originalVersion || json._release !== originalRelease;
+    resources.metadata._version !== originalVersion ||
+    resources.metadata._release !== originalRelease;
 
   console.time("loadProjectData.loadProject loadAssets");
   const [
@@ -185,57 +136,21 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     return entity;
   };
 
-  console.time("loadProjectData.loadProject fixPalettes");
-
-  console.timeEnd("loadProjectData.loadProject fixPalettes");
-
-  console.time("loadProjectData.loadProject build actorsBySceneFolderLookup");
-  const actorSubFolder = `${path.posix.sep}actors${path.posix.sep}`;
-  const actorsBySceneFolderLookup = groupBy(
-    (resourcesLookup.actor ?? []).sort(sortByIndex),
-    (row) => {
-      const actorFolderIndex = row.path.lastIndexOf(actorSubFolder);
-      return row.path.substring(0, actorFolderIndex);
-    }
-  );
-  console.timeEnd(
-    "loadProjectData.loadProject build actorsBySceneFolderLookup"
-  );
-
-  console.time("loadProjectData.loadProject build triggersBySceneFolderLookup");
-  const triggerSubFolder = `${path.posix.sep}triggers${path.posix.sep}`;
-  const triggersBySceneFolderLookup = groupBy(
-    (resourcesLookup.trigger ?? []).sort(sortByIndex),
-    (row) => {
-      const triggerFolderIndex = row.path.lastIndexOf(triggerSubFolder);
-      return row.path.substring(0, triggerFolderIndex);
-    }
-  );
-  console.timeEnd(
-    "loadProjectData.loadProject build triggersBySceneFolderLookup"
-  );
-
   console.time("loadProjectData.loadProject build sceneResources");
 
-  const sceneResources = (resourcesLookup.scene ?? []).map((row) => {
-    const sceneDir = path.posix.dirname(row.path);
-    return addMissingEntityId({
-      ...row.data,
-      actors: (actorsBySceneFolderLookup[sceneDir] ?? []).map((actorRow) =>
-        addMissingEntityId(actorRow.data)
-      ),
-      triggers: (triggersBySceneFolderLookup[sceneDir] ?? []).map(
-        (triggerRow) => addMissingEntityId(triggerRow.data)
-      ),
+  const sceneResources: CompressedSceneResourceWithChildren[] =
+    resources.scenes.map((s) => {
+      return addMissingEntityId({
+        ...s,
+        actors: s.actors.map(addMissingEntityId),
+        triggers: s.triggers.map(addMissingEntityId),
+      });
     });
-  });
 
   console.timeEnd("loadProjectData.loadProject build sceneResources");
 
   console.time("loadProjectData.loadProject build scriptResources");
-  const scriptResources = (resourcesLookup.script ?? []).map((row) =>
-    addMissingEntityId(row.data)
-  );
+  const scriptResources = resources.scripts.map(addMissingEntityId);
   console.timeEnd("loadProjectData.loadProject build scriptResources");
 
   const mergeAssetsWithResources = <
@@ -243,18 +158,13 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     A extends Asset
   >(
     assets: A[],
-    resources: {
-      // path: string;
-      // type: string;
-      data: R;
-    }[],
+    resources: R[],
     mergeFn: (asset: A, resource: R | undefined) => R
   ) => {
     const oldResourceByFilename = indexResourceByFilename(resources || []);
     return assets
       .map((asset) => {
-        const oldResource: R =
-          oldResourceByFilename[toAssetFilename(asset)]?.data;
+        const oldResource: R = oldResourceByFilename[toAssetFilename(asset)];
         return mergeFn(asset, oldResource);
       })
       .sort(sortByName);
@@ -265,11 +175,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     B extends string
   >(
     assets: A[],
-    resources: {
-      // path: string;
-      // type: string;
-      data: A & { _resourceType: B };
-    }[],
+    resources: Omit<A & { _resourceType: B }, "inode" | "_v" | "plugin">[],
     resourceType: B
   ) => {
     return mergeAssetsWithResources(assets, resources, (asset, resource) => {
@@ -286,11 +192,10 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
     B extends string
   >(
     assets: A[],
-    resources: {
-      // path: string;
-      // type: string;
-      data: A & { _resourceType: B };
-    }[],
+    resources: Omit<
+      A & { _resourceType: B },
+      "inode" | "_v" | "plugin" | "mapping"
+    >[],
     resourceType: B
   ) => {
     return mergeAssetsWithResources(assets, resources, (asset, resource) => {
@@ -307,7 +212,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const backgroundResources = mergeAssetsWithResources<
     CompressedBackgroundResource,
     BackgroundAssetData
-  >(backgrounds, resourcesLookup.background, (asset, resource) => {
+  >(backgrounds, resources.backgrounds, (asset, resource) => {
     if (resource) {
       return {
         _resourceType: "background",
@@ -332,7 +237,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const spriteResources = mergeAssetsWithResources<
     SpriteResource,
     SpriteAssetData
-  >(sprites, resourcesLookup.sprite, (asset, resource) => {
+  >(sprites, resources.sprites, (asset, resource) => {
     if (!resource || !resource.states || resource.numTiles === undefined) {
       modifiedSpriteIds.push(resource?.id ?? asset.id);
     }
@@ -382,7 +287,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build emoteResources");
   const emoteResources = mergeAssetIdAndSymbolsWithResources(
     emotes,
-    resourcesLookup.emote,
+    resources.emotes,
     "emote"
   );
   console.timeEnd("loadProjectData.loadProject build emoteResources");
@@ -390,7 +295,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build avatarResources");
   const avatarResources = mergeAssetIdsWithResources(
     avatars,
-    resourcesLookup.avatar,
+    resources.avatars,
     "avatar"
   );
   console.timeEnd("loadProjectData.loadProject build avatarResources");
@@ -398,7 +303,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build tilesetResources");
   const tilesetResources = mergeAssetIdAndSymbolsWithResources(
     tilesets,
-    resourcesLookup.tileset,
+    resources.tilesets,
     "tileset"
   );
   console.timeEnd("loadProjectData.loadProject build tilesetResources");
@@ -406,7 +311,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build soundResources");
   const soundResources = mergeAssetIdAndSymbolsWithResources(
     sounds,
-    resourcesLookup.sound,
+    resources.sounds,
     "sound"
   );
   console.timeEnd("loadProjectData.loadProject build soundResources");
@@ -414,7 +319,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build fontResources");
   const fontResources = mergeAssetIdAndSymbolsWithResources(
     fonts,
-    resourcesLookup.font,
+    resources.fonts,
     "font"
   );
   console.timeEnd("loadProjectData.loadProject build fontResources");
@@ -423,7 +328,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const musicResources = mergeAssetsWithResources<
     MusicResource,
     MusicAssetData
-  >(music, resourcesLookup.music, (asset, resource) => {
+  >(music, resources.music, (asset, resource) => {
     if (resource) {
       return {
         _resourceType: "music",
@@ -444,9 +349,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.timeEnd("loadProjectData.loadProject build musicResources");
 
   console.time("loadProjectData.loadProject build paletteResources");
-  const paletteResources: PaletteResource[] = (
-    resourcesLookup.palette ?? []
-  ).map((row) => addMissingEntityId(row.data));
+  const paletteResources: PaletteResource[] =
+    resources.palettes.map(addMissingEntityId);
 
   // Add any missing default palettes
   for (let i = 0; i < defaultPalettes.length; i++) {
@@ -469,36 +373,23 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.timeEnd("loadProjectData.loadProject build paletteResources");
 
   console.time("loadProjectData.loadProject build variablesResource");
-  const variablesResource: VariablesResource = (resourcesLookup.variables ??
-    [])[0].data;
+  const variablesResource: VariablesResource = resources.variables;
   console.timeEnd("loadProjectData.loadProject build variablesResource");
 
   console.time("loadProjectData.loadProject build engineFieldValuesResource");
   const engineFieldValuesResource: EngineFieldValuesResource =
-    (resourcesLookup.engineFieldValues ?? [])[0].data;
+    resources.engineFieldValues;
   console.timeEnd(
     "loadProjectData.loadProject build engineFieldValuesResource"
   );
 
   console.time("loadProjectData.loadProject build settingsResource");
-  const settingsResource: SettingsResource = (
-    resourcesLookup.settings ?? []
-  ).reduce(
-    (memo, resource) => {
-      return {
-        ...memo,
-        ...resource.data,
-      };
-    },
-    { _resourceType: "settings", ...defaultProjectSettings }
-  );
+  const settingsResource: SettingsResource = resources.settings;
   console.timeEnd("loadProjectData.loadProject build settingsResource");
 
   return {
     resources: {
       scenes: sceneResources,
-      // actors: actorResources,
-      // triggers: triggerResources,
       scripts: scriptResources,
       sprites: spriteResources,
       backgrounds: backgroundResources,

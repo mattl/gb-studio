@@ -11,7 +11,7 @@ import type {
   Scene,
   SoundData,
   SpriteSheetData,
-  Tileset,
+  TilesetData,
   Trigger,
   Variable,
 } from "shared/lib/entities/entitiesTypes";
@@ -75,7 +75,7 @@ export type BackgroundResource = Omit<
   tileColors: number[];
 };
 
-export type TilesetResource = Tileset & {
+export type TilesetResource = TilesetData & {
   _resourceType: "tileset";
 };
 
@@ -172,4 +172,15 @@ export type ProjectEntityResources = Omit<
 export type CompressedProjectResourcesPatch = {
   data: CompressedProjectResources;
   paths: string[];
+};
+
+export const isProjectMetadataResource = (
+  x: unknown
+): x is ProjectMetadataResource => {
+  return (
+    x !== null &&
+    typeof x === "object" &&
+    "_resourceType" in x &&
+    (x as { _resourceType: string })._resourceType === "project"
+  );
 };
