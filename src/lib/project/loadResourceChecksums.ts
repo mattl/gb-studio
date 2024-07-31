@@ -14,7 +14,7 @@ import promiseLimit from "lib/helpers/promiseLimit";
 import groupBy from "lodash/groupBy";
 import type { Dictionary } from "lodash";
 import { defaultProjectSettings } from "consts";
-import { checksumFile } from "lib/helpers/checksum";
+import { checksumMD5File } from "lib/helpers/checksum";
 
 const globAsync = promisify(glob);
 
@@ -37,10 +37,11 @@ export const loadProjectResourceChecksums = async (
   projectPath: string
 ): Promise<Record<string, string>> => {
   const projectRoot = path.dirname(projectPath);
+  const projectResourcesRoot = path.join(projectRoot, "project");
 
   console.time("loadProjectResourceHashes.loadProject globResources");
   const projectResources = await globAsync(
-    path.join(projectRoot, "project", "**/*.gbsres")
+    path.join(projectResourcesRoot, "**/*.gbsres")
   );
   console.timeEnd("loadProjectResourceHashes.loadProject globResources");
 
@@ -48,7 +49,7 @@ export const loadProjectResourceChecksums = async (
   const resources = await promiseLimit(
     CONCURRENT_RESOURCE_LOAD_COUNT,
     projectResources.map((projectResourcePath) => async () => {
-      const resourceData = await checksumFile(projectResourcePath);
+      const resourceData = await checksumMD5File(projectResourcePath);
       return {
         path: path
           .relative(projectRoot, projectResourcePath)

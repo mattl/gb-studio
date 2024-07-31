@@ -182,9 +182,12 @@ export type ProjectEntityResources = Omit<
   "settings" | "metadata"
 >;
 
-export type CompressedProjectResourcesPatch = {
-  data: CompressedProjectResources;
+export type WriteFile = { path: string; checksum: string; data: string };
+
+export type WriteResourcesPatch = {
+  data: WriteFile[];
   paths: string[];
+  metadata: ProjectMetadataResource;
 };
 
 export const isProjectMetadataResource = (

@@ -290,7 +290,10 @@ const saveProject = createAsyncThunk<void>(
       console.log({ resourceChecksums });
 
       console.time("saveProject action CREATE PATCH");
-      const patch = buildCompressedProjectResourcesPatch(data);
+      const patch = buildCompressedProjectResourcesPatch(
+        data,
+        resourceChecksums
+      );
       console.timeEnd("saveProject action CREATE PATCH");
       console.log({ patch });
       console.time("saveProject action SEND TO MAIN");

@@ -5,7 +5,10 @@ import { promisify } from "util";
 import { writeFileAndFlushAsync } from "lib/helpers/fs/writeFileAndFlush";
 import { writeFileWithBackupAsync } from "lib/helpers/fs/writeFileWithBackup";
 import Path from "path";
-import { CompressedProjectResourcesPatch } from "shared/lib/resources/types";
+import {
+  // CompressedProjectResourcesPatch,
+  WriteResourcesPatch,
+} from "shared/lib/resources/types";
 import promiseLimit from "lib/helpers/promiseLimit";
 import {
   getActorResourcePath,
@@ -16,12 +19,13 @@ import {
   getScriptResourcePath,
   getTriggerResourcePath,
 } from "shared/lib/resources/paths";
+import { uniq } from "lodash";
 
 const CONCURRENT_RESOURCE_SAVE_COUNT = 8;
 
 const globAsync = promisify(glob);
 
-const encodeResource = <T extends Record<string, unknown>>(
+export const encodeResource = <T extends Record<string, unknown>>(
   resourceType: string,
   data: T
 ): string => {
@@ -47,12 +51,13 @@ const encodeResource = <T extends Record<string, unknown>>(
 
 const saveProjectData = async (
   projectPath: string,
-  patch: CompressedProjectResourcesPatch
+  patch: WriteResourcesPatch
 ) => {
   console.time("SAVING PROJECT");
   console.log("SAVE PROJECT DATA" + projectPath);
 
-  const projectResources = patch.data;
+  const writeBuffer = patch.data;
+  const metadata = patch.metadata;
 
   const projectFolder = Path.dirname(projectPath);
   const projectPartsFolder = Path.join(projectFolder, "project");
@@ -65,7 +70,7 @@ const saveProjectData = async (
 
   const existingResourcePaths = new Set(
     (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
-      (path) => Path.relative(projectPartsFolder, path)
+      (path) => Path.relative(projectFolder, path)
     )
   );
   const expectedResourcePaths: Set<string> = new Set(patch.paths);
@@ -77,187 +82,37 @@ const saveProjectData = async (
     forceWrite = false;
   }
 
-  const writeBuffer: { path: string; data: string }[] = [];
-
-  const writeResource = async <T extends Record<string, unknown>>(
-    filename: string,
-    resourceType: string,
-    resource: T
-  ) => {
-    expectedResourcePaths.add(filename);
-
-    const filePath = Path.join(projectPartsFolder, filename);
-    await ensureDir(Path.dirname(filePath));
-    writeBuffer.push({
-      path: filePath,
-      data: encodeResource(resourceType, resource),
-    });
-  };
-
-  console.time("SAVING PROJECT : build scene resources");
-  let sceneIndex = 0;
-  for (const scene of projectResources.scenes) {
-    const sceneFolder = getSceneFolderPath(scene, sceneIndex);
-    const sceneFilename = getSceneResourcePath(scene, sceneIndex);
-    // Scene Actors
-    if (scene.actors.length > 0) {
-      let actorIndex = 0;
-      for (const actor of scene.actors) {
-        if (actor) {
-          const actorFilename = getActorResourcePath(
-            sceneFolder,
-            actor,
-            actorIndex
-          );
-          await writeResource(actorFilename, "actor", {
-            ...actor,
-            _index: actorIndex,
-          });
-          actorIndex++;
-        }
-      }
-    }
-    // Scene Triggers
-    if (scene.triggers.length > 0) {
-      let triggerIndex = 0;
-      for (const trigger of scene.triggers) {
-        if (trigger) {
-          const triggerFilename = getTriggerResourcePath(
-            sceneFolder,
-            trigger,
-            triggerIndex
-          );
-          await writeResource(triggerFilename, "trigger", {
-            ...trigger,
-            _index: triggerIndex,
-          });
-          triggerIndex++;
-        }
-      }
-    }
-
-    await writeResource(sceneFilename, "scene", {
-      ...scene,
-      actors: undefined,
-      triggers: undefined,
-      tileColors: undefined,
-    });
-    sceneIndex++;
-  }
-  console.timeEnd("SAVING PROJECT : build scene resources");
-
-  console.time("SAVING PROJECT : build background resources");
-
-  let backgroundIndex = 0;
-  for (const background of projectResources.backgrounds) {
-    const backgroundFilename = getResourceAssetPath(background);
-    await writeResource(backgroundFilename, "background", background);
-    backgroundIndex++;
-  }
-  console.timeEnd("SAVING PROJECT : build background resources");
-
-  let spriteIndex = 0;
-  for (const sprite of projectResources.sprites) {
-    const spriteFilename = getResourceAssetPath(sprite);
-    await writeResource(spriteFilename, "sprite", sprite);
-    spriteIndex++;
-  }
-
-  let paletteIndex = 0;
-  for (const palette of projectResources.palettes) {
-    const paletteFilename = getPaletteResourcePath(palette, paletteIndex);
-    await writeResource(paletteFilename, "palette", palette);
-    paletteIndex++;
-  }
-
-  let scriptIndex = 0;
-  for (const script of projectResources.scripts) {
-    const scriptFilename = getScriptResourcePath(script, scriptIndex);
-    await writeResource(scriptFilename, "script", script);
-    scriptIndex++;
-  }
-
-  let songIndex = 0;
-  for (const song of projectResources.music) {
-    const songFilename = getResourceAssetPath(song);
-    await writeResource(songFilename, "music", song);
-    songIndex++;
-  }
-
-  let soundIndex = 0;
-  for (const sound of projectResources.sounds) {
-    const soundFilename = getResourceAssetPath(sound);
-    await writeResource(soundFilename, "sound", sound);
-    soundIndex++;
-  }
-
-  let emoteIndex = 0;
-  for (const emote of projectResources.emotes) {
-    const emoteFilename = getResourceAssetPath(emote);
-    await writeResource(emoteFilename, "emote", emote);
-    emoteIndex++;
-  }
-
-  let avatarIndex = 0;
-  for (const avatar of projectResources.avatars) {
-    const avatarFilename = getResourceAssetPath(avatar);
-    await writeResource(avatarFilename, "avatar", avatar);
-    avatarIndex++;
-  }
-
-  let tilesetIndex = 0;
-  for (const tileset of projectResources.tilesets) {
-    const tilesetFilename = getResourceAssetPath(tileset);
-    await writeResource(tilesetFilename, "tileset", tileset);
-    tilesetIndex++;
-  }
-
-  let fontIndex = 0;
-  for (const font of projectResources.fonts) {
-    const fontFilename = getResourceAssetPath(font);
-    await writeResource(fontFilename, "font", font);
-    fontIndex++;
-  }
-
-  await writeResource(settingsResFilename, "settings", {
-    ...projectResources.settings,
-    worldScrollX: undefined,
-    worldScrollY: undefined,
-    zoom: undefined,
-  });
-
-  await writeResource(userSettingsResFilename, "settings", {
-    worldScrollX: projectResources.settings.worldScrollX,
-    worldScrollY: projectResources.settings.worldScrollY,
-    zoom: projectResources.settings.zoom,
-  });
-
-  await writeResource(
-    variablesResFilename,
-    "variables",
-    projectResources.variables
+  console.time("Ensure Resource Dirs");
+  const resourceDirPaths = uniq(
+    writeBuffer.map(({ path }) => Path.dirname(path))
   );
-
-  await writeResource(
-    engineFieldValuesResFilename,
-    "engineFieldValues",
-    projectResources.engineFieldValues
+  console.log("resourceDirPaths");
+  console.log(resourceDirPaths);
+  await promiseLimit(
+    CONCURRENT_RESOURCE_SAVE_COUNT,
+    resourceDirPaths.map((path) => async () => {
+      await ensureDir(Path.join(projectFolder, path));
+    })
   );
+  console.timeEnd("Ensure Resource Dirs");
 
   console.log("WRITE BUFFER SIZE=" + writeBuffer.length);
   console.time("Flush Write Buffer");
   await promiseLimit(
     CONCURRENT_RESOURCE_SAVE_COUNT,
     writeBuffer.map(({ path, data }) => async () => {
-      await writeFileAndFlushAsync(path, data);
+      console.log("WRITE FILE", path);
+      await writeFileAndFlushAsync(Path.join(projectFolder, path), data);
     })
   );
   console.timeEnd("Flush Write Buffer");
 
   await writeFileWithBackupAsync(
     projectPath,
-    encodeResource("project", projectResources.metadata)
+    encodeResource("project", metadata)
   );
+
+  console.log("@TODO NEED TO WRITE METADATA FILE AGAIN");
 
   const resourceDiff = Array.from(existingResourcePaths).filter(
     (path) => !expectedResourcePaths.has(path)
@@ -265,12 +120,240 @@ const saveProjectData = async (
 
   // Remove previous project files that are no longer needed
   for (const path of resourceDiff) {
-    const removePath = Path.join(projectPartsFolder, path);
+    const removePath = Path.join(projectFolder, path);
     console.log("WANTING TO REMOVE...", removePath);
     await remove(removePath);
   }
 
   console.timeEnd("SAVING PROJECT");
 };
+
+// const saveProjectData = async (
+//   projectPath: string,
+//   patch: CompressedProjectResourcesPatch
+// ) => {
+//   console.time("SAVING PROJECT");
+//   console.log("SAVE PROJECT DATA" + projectPath);
+
+//   const projectResources = patch.data;
+
+//   const projectFolder = Path.dirname(projectPath);
+//   const projectPartsFolder = Path.join(projectFolder, "project");
+//   const variablesResFilename = Path.join(`variables.gbsres`);
+//   const settingsResFilename = Path.join(`settings.gbsres`);
+//   const userSettingsResFilename = Path.join(`user_settings.gbsres`);
+//   const engineFieldValuesResFilename = Path.join(`engine_field_values.gbsres`);
+
+//   console.time("SAVING PROJECT : existingResourcePaths");
+
+//   const existingResourcePaths = new Set(
+//     (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
+//       (path) => Path.relative(projectPartsFolder, path)
+//     )
+//   );
+//   const expectedResourcePaths: Set<string> = new Set(patch.paths);
+//   console.timeEnd("SAVING PROJECT : existingResourcePaths");
+
+//   let forceWrite = true;
+//   if (await pathExists(projectPartsFolder)) {
+//     // await copy(projectPartsFolder, projectPartsBckFolder);
+//     forceWrite = false;
+//   }
+
+//   const writeBuffer: { path: string; data: string }[] = [];
+
+//   const writeResource = async <T extends Record<string, unknown>>(
+//     filename: string,
+//     resourceType: string,
+//     resource: T
+//   ) => {
+//     expectedResourcePaths.add(filename);
+
+//     const filePath = Path.join(projectPartsFolder, filename);
+//     await ensureDir(Path.dirname(filePath));
+//     writeBuffer.push({
+//       path: filePath,
+//       data: encodeResource(resourceType, resource),
+//     });
+//   };
+
+//   console.time("SAVING PROJECT : build scene resources");
+//   let sceneIndex = 0;
+//   for (const scene of projectResources.scenes) {
+//     const sceneFolder = getSceneFolderPath(scene, sceneIndex);
+//     const sceneFilename = getSceneResourcePath(scene, sceneIndex);
+//     // Scene Actors
+//     if (scene.actors.length > 0) {
+//       let actorIndex = 0;
+//       for (const actor of scene.actors) {
+//         if (actor) {
+//           const actorFilename = getActorResourcePath(
+//             sceneFolder,
+//             actor,
+//             actorIndex
+//           );
+//           await writeResource(actorFilename, "actor", {
+//             ...actor,
+//             _index: actorIndex,
+//           });
+//           actorIndex++;
+//         }
+//       }
+//     }
+//     // Scene Triggers
+//     if (scene.triggers.length > 0) {
+//       let triggerIndex = 0;
+//       for (const trigger of scene.triggers) {
+//         if (trigger) {
+//           const triggerFilename = getTriggerResourcePath(
+//             sceneFolder,
+//             trigger,
+//             triggerIndex
+//           );
+//           await writeResource(triggerFilename, "trigger", {
+//             ...trigger,
+//             _index: triggerIndex,
+//           });
+//           triggerIndex++;
+//         }
+//       }
+//     }
+
+//     await writeResource(sceneFilename, "scene", {
+//       ...scene,
+//       actors: undefined,
+//       triggers: undefined,
+//       tileColors: undefined,
+//     });
+//     sceneIndex++;
+//   }
+//   console.timeEnd("SAVING PROJECT : build scene resources");
+
+//   console.time("SAVING PROJECT : build background resources");
+
+//   let backgroundIndex = 0;
+//   for (const background of projectResources.backgrounds) {
+//     const backgroundFilename = getResourceAssetPath(background);
+//     await writeResource(backgroundFilename, "background", background);
+//     backgroundIndex++;
+//   }
+//   console.timeEnd("SAVING PROJECT : build background resources");
+
+//   let spriteIndex = 0;
+//   for (const sprite of projectResources.sprites) {
+//     const spriteFilename = getResourceAssetPath(sprite);
+//     await writeResource(spriteFilename, "sprite", sprite);
+//     spriteIndex++;
+//   }
+
+//   let paletteIndex = 0;
+//   for (const palette of projectResources.palettes) {
+//     const paletteFilename = getPaletteResourcePath(palette, paletteIndex);
+//     await writeResource(paletteFilename, "palette", palette);
+//     paletteIndex++;
+//   }
+
+//   let scriptIndex = 0;
+//   for (const script of projectResources.scripts) {
+//     const scriptFilename = getScriptResourcePath(script, scriptIndex);
+//     await writeResource(scriptFilename, "script", script);
+//     scriptIndex++;
+//   }
+
+//   let songIndex = 0;
+//   for (const song of projectResources.music) {
+//     const songFilename = getResourceAssetPath(song);
+//     await writeResource(songFilename, "music", song);
+//     songIndex++;
+//   }
+
+//   let soundIndex = 0;
+//   for (const sound of projectResources.sounds) {
+//     const soundFilename = getResourceAssetPath(sound);
+//     await writeResource(soundFilename, "sound", sound);
+//     soundIndex++;
+//   }
+
+//   let emoteIndex = 0;
+//   for (const emote of projectResources.emotes) {
+//     const emoteFilename = getResourceAssetPath(emote);
+//     await writeResource(emoteFilename, "emote", emote);
+//     emoteIndex++;
+//   }
+
+//   let avatarIndex = 0;
+//   for (const avatar of projectResources.avatars) {
+//     const avatarFilename = getResourceAssetPath(avatar);
+//     await writeResource(avatarFilename, "avatar", avatar);
+//     avatarIndex++;
+//   }
+
+//   let tilesetIndex = 0;
+//   for (const tileset of projectResources.tilesets) {
+//     const tilesetFilename = getResourceAssetPath(tileset);
+//     await writeResource(tilesetFilename, "tileset", tileset);
+//     tilesetIndex++;
+//   }
+
+//   let fontIndex = 0;
+//   for (const font of projectResources.fonts) {
+//     const fontFilename = getResourceAssetPath(font);
+//     await writeResource(fontFilename, "font", font);
+//     fontIndex++;
+//   }
+
+//   await writeResource(settingsResFilename, "settings", {
+//     ...projectResources.settings,
+//     worldScrollX: undefined,
+//     worldScrollY: undefined,
+//     zoom: undefined,
+//   });
+
+//   await writeResource(userSettingsResFilename, "settings", {
+//     worldScrollX: projectResources.settings.worldScrollX,
+//     worldScrollY: projectResources.settings.worldScrollY,
+//     zoom: projectResources.settings.zoom,
+//   });
+
+//   await writeResource(
+//     variablesResFilename,
+//     "variables",
+//     projectResources.variables
+//   );
+
+//   await writeResource(
+//     engineFieldValuesResFilename,
+//     "engineFieldValues",
+//     projectResources.engineFieldValues
+//   );
+
+//   console.log("WRITE BUFFER SIZE=" + writeBuffer.length);
+//   console.time("Flush Write Buffer");
+//   await promiseLimit(
+//     CONCURRENT_RESOURCE_SAVE_COUNT,
+//     writeBuffer.map(({ path, data }) => async () => {
+//       await writeFileAndFlushAsync(path, data);
+//     })
+//   );
+//   console.timeEnd("Flush Write Buffer");
+
+//   await writeFileWithBackupAsync(
+//     projectPath,
+//     encodeResource("project", projectResources.metadata)
+//   );
+
+//   const resourceDiff = Array.from(existingResourcePaths).filter(
+//     (path) => !expectedResourcePaths.has(path)
+//   );
+
+//   // Remove previous project files that are no longer needed
+//   for (const path of resourceDiff) {
+//     const removePath = Path.join(projectPartsFolder, path);
+//     console.log("WANTING TO REMOVE...", removePath);
+//     await remove(removePath);
+//   }
+
+//   console.timeEnd("SAVING PROJECT");
+// };
 
 export default saveProjectData;

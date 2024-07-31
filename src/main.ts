@@ -115,7 +115,7 @@ import confirmDeleteAsset from "lib/electron/dialog/confirmDeleteAsset";
 import { getPatronsFromGithub } from "lib/credits/getPatronsFromGithub";
 import {
   CompressedProjectResources,
-  CompressedProjectResourcesPatch,
+  WriteResourcesPatch,
 } from "shared/lib/resources/types";
 import { decompressProjectResources } from "shared/lib/resources/compression";
 import { loadProjectResourceChecksums } from "lib/project/loadResourceChecksums";
@@ -1206,7 +1206,7 @@ ipcMain.handle("project:load", async (): Promise<LoadProjectResult> => {
 
 ipcMain.handle(
   "project:save",
-  async (_, data: CompressedProjectResourcesPatch): Promise<void> => {
+  async (_, data: WriteResourcesPatch): Promise<void> => {
     await saveProjectData(projectPath, data);
   }
 );
