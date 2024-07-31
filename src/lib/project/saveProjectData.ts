@@ -28,13 +28,6 @@ const globAsync = promisify(glob);
 
 type Entity = { id: string; name: string };
 
-const stringify8bitArray = (arr: number[], _width: number): string => {
-  return compress8bitNumberArray(arr);
-  // return chunk(arr, width)
-  //   .map((row) => row.map((v) => v.toString(16).padStart(2, "0")).join(""))
-  //   .join("\n");
-};
-
 const encodeResource = <T extends Record<string, unknown>>(
   resourceType: string,
   data: T
@@ -94,8 +87,6 @@ const saveProjectData = async (
   // throw new Error("SAVING BLOCKED FOR NOW");
   const projectFolder = Path.dirname(projectPath);
   const projectPartsFolder = Path.join(projectFolder, "project");
-  const projectPartsBckFolder = Path.join(projectFolder, "project.bak");
-  const projectResFilename = Path.join(projectFolder, `project.gbsres`);
   const variablesResFilename = Path.join(`variables.gbsres`);
   const settingsResFilename = Path.join(`settings.gbsres`);
   const userSettingsResFilename = Path.join(`user_settings.gbsres`);
@@ -360,10 +351,6 @@ const saveProjectData = async (
     // await remove(removePath);
   }
 
-  // await move(projectPartsTmpFolder, projectPartsFolder, { overwrite: true });
-
-  // // Keep original save for now too
-  // await writeFileWithBackupAsync(projectPath, JSON.stringify(project, null, 4));
   console.timeEnd("SAVING PROJECT");
 };
 
