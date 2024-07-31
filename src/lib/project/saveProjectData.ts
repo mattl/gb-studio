@@ -1,25 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { copy, ensureDir, move, pathExists, remove } from "fs-extra";
+import { ensureDir, pathExists, remove } from "fs-extra";
 import glob from "glob";
 import { promisify } from "util";
 import { writeFileAndFlushAsync } from "lib/helpers/fs/writeFileAndFlush";
 import { writeFileWithBackupAsync } from "lib/helpers/fs/writeFileWithBackup";
 import Path from "path";
-import {
-  actorName,
-  customEventName,
-  paletteName,
-  sceneName,
-  triggerName,
-} from "shared/lib/entities/entitiesHelpers";
-import { stripInvalidPathCharacters } from "shared/lib/helpers/stripInvalidFilenameCharacters";
-import type { ProjectData } from "store/features/project/projectActions";
-import { compress8bitNumberArray } from "shared/lib/resources/compression";
-import {
-  CompressedProjectResources,
-  CompressedProjectResourcesPatch,
-} from "shared/lib/resources/types";
-import keyBy from "lodash/keyBy";
+import { CompressedProjectResourcesPatch } from "shared/lib/resources/types";
 import promiseLimit from "lib/helpers/promiseLimit";
 import {
   getActorResourcePath,
@@ -34,8 +20,6 @@ import {
 const CONCURRENT_RESOURCE_SAVE_COUNT = 8;
 
 const globAsync = promisify(glob);
-
-type Entity = { id: string; name: string };
 
 const encodeResource = <T extends Record<string, unknown>>(
   resourceType: string,
@@ -61,29 +45,6 @@ const encodeResource = <T extends Record<string, unknown>>(
   );
 };
 
-const entityToFilePath = (entity: Entity, nameOverride?: string): string => {
-  const name = nameOverride || entity.name;
-  return `${stripInvalidPathCharacters(name)
-    .toLocaleLowerCase()
-    .replace(/\s+/g, "_")}__${entity.id}`;
-};
-
-const actorToFileName = (actor: Entity, actorIndex: number): string => {
-  const name = actorName(actor, actorIndex);
-  return `${stripInvalidPathCharacters(name)
-    .toLocaleLowerCase()
-    .replace(/[/\\]/g, "_")
-    .replace(/\s+/g, "_")}__${actor.id}`;
-};
-
-const triggerToFileName = (trigger: Entity, triggerIndex: number): string => {
-  const name = triggerName(trigger, triggerIndex);
-  return `${stripInvalidPathCharacters(name)
-    .toLocaleLowerCase()
-    .replace(/[/\\]/g, "_")
-    .replace(/\s+/g, "_")}__${trigger.id}`;
-};
-
 const saveProjectData = async (
   projectPath: string,
   patch: CompressedProjectResourcesPatch
@@ -93,25 +54,12 @@ const saveProjectData = async (
 
   const projectResources = patch.data;
 
-  // throw new Error("SAVING BLOCKED FOR NOW");
   const projectFolder = Path.dirname(projectPath);
   const projectPartsFolder = Path.join(projectFolder, "project");
   const variablesResFilename = Path.join(`variables.gbsres`);
   const settingsResFilename = Path.join(`settings.gbsres`);
   const userSettingsResFilename = Path.join(`user_settings.gbsres`);
   const engineFieldValuesResFilename = Path.join(`engine_field_values.gbsres`);
-
-  const scenesFolder = Path.join("scenes");
-  const backgroundsFolder = Path.join("backgrounds");
-  const spritesFolder = Path.join("sprites");
-  const palettesFolder = Path.join("palettes");
-  const scriptsFolder = Path.join("scripts");
-  const musicFolder = Path.join("music");
-  const soundsFolder = Path.join("sounds");
-  const emotesFolder = Path.join("emotes");
-  const avatarsFolder = Path.join("avatars");
-  const tilesetsFolder = Path.join("tilesets");
-  const fontsFolder = Path.join("fonts");
 
   console.time("SAVING PROJECT : existingResourcePaths");
 
@@ -138,16 +86,12 @@ const saveProjectData = async (
   ) => {
     expectedResourcePaths.add(filename);
 
-    // const { foundDirty, cleanedObject } = deepCleanAndCheckDirty(resource);
-
-    // if (forceWrite || foundDirty || !existingResourcePaths.has(filename)) {
     const filePath = Path.join(projectPartsFolder, filename);
     await ensureDir(Path.dirname(filePath));
     writeBuffer.push({
       path: filePath,
       data: encodeResource(resourceType, resource),
     });
-    // }
   };
 
   console.time("SAVING PROJECT : build scene resources");
