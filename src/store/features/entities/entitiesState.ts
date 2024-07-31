@@ -812,6 +812,7 @@ const addScene: CaseReducer<
     playerHit1Script: [],
     playerHit2Script: [],
     playerHit3Script: [],
+    __dirty: true,
   };
 
   scenesAdapter.addOne(state.scenes, newScene);
@@ -847,6 +848,7 @@ const moveScene: CaseReducer<
     // Move scene
     scene.x = newX;
     scene.y = newY;
+    scene.__dirty = true;
 
     // Move additionally selected scenes by same amount
     for (const additionalSceneId of action.payload.additionalSceneIds) {
@@ -1053,6 +1055,7 @@ const addActor: CaseReducer<
     id: action.payload.actorId,
     x: clamp(action.payload.x, 0, scene.width - 2),
     y: clamp(action.payload.y, 0, scene.height - 1),
+    __dirty: true,
   };
 
   // Add to scene
@@ -1250,6 +1253,7 @@ const addTrigger: CaseReducer<
     height,
     script: [],
     leaveScript: [],
+    __dirty: true,
   };
 
   // Add to scene
@@ -2773,6 +2777,7 @@ const addScriptEvents: CaseReducer<
         ...scriptEventData,
         id: action.payload.scriptEventIds[scriptEventIndex],
         symbol: undefined,
+        __dirty: true,
       };
       if (scriptEventData.children) {
         newScriptEvent.children = Object.keys(scriptEventData.children).reduce(
