@@ -26,6 +26,7 @@ export const migrateLegacyProject = (
     <D>(data: D): D & { _resourceType: T } => ({
       _resourceType: type,
       ...data,
+      __dirty: true,
     });
 
   const encodeScene = (scene: Scene): CompressedSceneResourceWithChildren => {

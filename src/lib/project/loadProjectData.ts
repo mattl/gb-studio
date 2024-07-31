@@ -188,7 +188,12 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   };
 
   const mergeAssetIdAndSymbolsWithResources = <
-    A extends Asset & { id: string; symbol: string; name: string },
+    A extends Asset & {
+      id: string;
+      symbol: string;
+      name: string;
+      __dirty?: boolean;
+    },
     B extends string
   >(
     assets: A[],
@@ -204,6 +209,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
         ...asset,
         id: resource?.id ?? asset.id,
         symbol: resource?.symbol ?? asset.symbol,
+        __dirty: resource?.__dirty ?? false,
       };
     });
   };
@@ -223,12 +229,14 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
           resource?.tileColors !== undefined ? resource.tileColors : "",
         autoColor:
           resource?.autoColor !== undefined ? resource.autoColor : false,
+        __dirty: resource.__dirty ?? false,
       };
     }
     return {
       _resourceType: "background",
       ...asset,
       tileColors: "",
+      __dirty: true,
     };
   });
   console.timeEnd("loadProjectData.loadProject build backgroundResources");
@@ -280,6 +288,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
           })),
         };
       }),
+      __dirty: resource?.__dirty ?? false,
     } as SpriteResource;
   });
   console.timeEnd("loadProjectData.loadProject build spriteResources");
