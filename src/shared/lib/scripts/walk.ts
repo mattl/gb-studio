@@ -7,7 +7,6 @@ import {
   ActorScriptKey,
   CustomEventNormalized,
   SceneNormalized,
-  Scene,
   SceneScriptKey,
   ScriptEventNormalized,
   ScriptEvent,
@@ -18,6 +17,7 @@ import {
   sceneScriptKeys,
   CustomEvent,
 } from "shared/lib/entities/entitiesTypes";
+import { LegacyScene } from "shared/lib/entities/legacyTypes";
 
 //#region Script Events
 
@@ -95,7 +95,7 @@ export const mapUncommentedScript = (
  * @returns A new denormalized scene with updated scripts.
  */
 export const mapSceneScript = (
-  scene: Scene,
+  scene: LegacyScene,
   callback: (e: ScriptEvent) => ScriptEvent
 ) => {
   const newScene = {
@@ -169,7 +169,7 @@ export const mapSceneScript = (
  * @returns A new denormalized scene with updated scripts.
  */
 export const mapScenesScript = (
-  scenes: Scene[],
+  scenes: LegacyScene[],
   callback: (e: ScriptEvent) => ScriptEvent
 ) => {
   return scenes.map((scene) => {
@@ -304,7 +304,7 @@ export const walkScript = (
  * @param callback - A callback function that is applied to each script event and all children
  */
 export const walkSceneSpecificScripts = (
-  scene: Scene,
+  scene: LegacyScene,
   options: WalkOptions,
   callback: (e: ScriptEvent) => void
 ) => {
@@ -353,7 +353,7 @@ export const walkTriggerScripts = (
  * @param callback - A callback function that is applied to each script event and all children
  */
 export const walkSceneScripts = (
-  scene: Scene,
+  scene: LegacyScene,
   options: WalkOptions,
   callback: (event: ScriptEvent, actor?: Actor, trigger?: Trigger) => void
 ) => {
@@ -378,11 +378,11 @@ export const walkSceneScripts = (
  * @param callback - A callback function that is applied to each script event and all children
  */
 export const walkScenesScripts = (
-  scenes: Scene[],
+  scenes: LegacyScene[],
   options: WalkOptions,
   callback: (
     event: ScriptEvent,
-    scene: Scene,
+    scene: LegacyScene,
     actor?: Actor,
     trigger?: Trigger
   ) => void

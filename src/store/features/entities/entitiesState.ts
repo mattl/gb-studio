@@ -49,7 +49,7 @@ import {
   TriggerNormalized,
   SceneNormalized,
   Background,
-  SpriteSheet,
+  SpriteSheetNormalized,
   Palette,
   Music,
   Variable,
@@ -109,7 +109,7 @@ const scenesAdapter = createEntityAdapter<SceneNormalized>();
 const backgroundsAdapter = createEntityAdapter<Background>({
   sortComparer: sortByFilename,
 });
-const spriteSheetsAdapter = createEntityAdapter<SpriteSheet>({
+const spriteSheetsAdapter = createEntityAdapter<SpriteSheetNormalized>({
   sortComparer: sortByFilename,
 });
 const tilesetsAdapter = createEntityAdapter<Tileset>({
@@ -435,7 +435,7 @@ const renamedAsset: CaseReducer<
 const loadSprite: CaseReducer<
   EntitiesState,
   PayloadAction<{
-    data: SpriteSheet;
+    data: SpriteSheetNormalized;
   }>
 > = (state, action) => {
   upsertAssetEntity(
@@ -469,7 +469,7 @@ const loadDetectedSprite: CaseReducer<
     metasprites: Metasprite[];
     metaspriteTiles: MetaspriteTile[];
     state: SpriteState;
-    changes: Partial<SpriteSheet>;
+    changes: Partial<SpriteSheetNormalized>;
   }>
 > = (state, action) => {
   const spriteSheet = localSpriteSheetSelectors.selectById(
@@ -1492,7 +1492,10 @@ const updateMonoOverrideIds = (state: EntitiesState) => {
 
 const editSpriteSheet: CaseReducer<
   EntitiesState,
-  PayloadAction<{ spriteSheetId: string; changes: Partial<SpriteSheet> }>
+  PayloadAction<{
+    spriteSheetId: string;
+    changes: Partial<SpriteSheetNormalized>;
+  }>
 > = (state, action) => {
   const spriteSheet = state.spriteSheets.entities[action.payload.spriteSheetId];
   const patch = { ...action.payload.changes, __dirty: true };

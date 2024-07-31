@@ -363,13 +363,15 @@ export type SpriteSheet = {
   boundsWidth: number;
   boundsHeight: number;
   animSpeed: number | null;
-  states: string[];
+  states: SpriteStateData[];
   __dirty?: boolean;
 };
 
-export type SpriteSheetData = Omit<SpriteSheet, "states" | "_v" | "inode"> & {
-  states: SpriteStateData[];
+export type SpriteSheetNormalized = Omit<SpriteSheet, "states"> & {
+  states: string[];
 };
+
+export type SpriteSheetData = Omit<SpriteSheet, "_v" | "inode">;
 
 export type SceneParallaxLayer = {
   height: number;
@@ -404,8 +406,8 @@ export type Scene = {
   autoFadeEventCollapse?: boolean;
   parallax?: SceneParallaxLayer[];
   playerSpriteSheetId?: string;
-  actors: Actor[];
-  triggers: Trigger[];
+  actors: string[];
+  triggers: string[];
   script: ScriptEvent[];
   playerHit1Script: ScriptEvent[];
   playerHit2Script: ScriptEvent[];
@@ -452,7 +454,7 @@ export interface EntitiesState {
   scenes: EntityState<SceneNormalized>;
   scriptEvents: EntityState<ScriptEventNormalized>;
   backgrounds: EntityState<Background>;
-  spriteSheets: EntityState<SpriteSheet>;
+  spriteSheets: EntityState<SpriteSheetNormalized>;
   metasprites: EntityState<Metasprite>;
   metaspriteTiles: EntityState<MetaspriteTile>;
   spriteAnimations: EntityState<SpriteAnimation>;

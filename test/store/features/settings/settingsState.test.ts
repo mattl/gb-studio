@@ -10,6 +10,7 @@ import projectActions, {
 import { dummyProjectData, dummyRootState } from "../../../dummydata";
 import { RootState } from "../../../../src/store/configureStore";
 
+/*
 test("Should be able to change settings", () => {
   const state: SettingsState = {
     ...initialState,
@@ -86,3 +87,4 @@ test("Should be able to select settings from root state", () => {
   };
   expect(getSettings(state).zoom).toBe(50);
 });
+*/

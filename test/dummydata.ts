@@ -1,7 +1,7 @@
 import {
   SceneNormalized,
   Background,
-  SpriteSheet,
+  SpriteSheetNormalized,
   Music,
   ActorNormalized,
   TriggerNormalized,
@@ -138,7 +138,7 @@ export const dummyBackground: Background = {
   _v: 0,
 };
 
-export const dummySpriteSheet: SpriteSheet = {
+export const dummySpriteSheet: SpriteSheetNormalized = {
   id: "",
   name: "",
   symbol: "sprite_0",

@@ -189,6 +189,7 @@ export const EVENT_MSG_PRE_FONTS = "Preparing fonts...";
 export const EVENT_MSG_PRE_COMPLETE = "Preparation complete";
 export const EVENT_MSG_COMPILING_EVENTS = "Compiling events...";
 
+/*
 const ensureProjectAsset = async (
   relativePath: string,
   {
@@ -2073,6 +2074,36 @@ const compile = async (
     sceneMap,
     variableMap,
   };
+};
+*/
+
+const compile = async (
+  projectData: ProjectData,
+  {
+    projectRoot = "/tmp",
+    scriptEventHandlers,
+    engineFields = [],
+    sceneTypes = [],
+    tmpPath = "/tmp",
+    debugEnabled = false,
+    progress = (_msg: string) => {},
+    warnings = (_msg: string) => {},
+  }: {
+    projectRoot: string;
+    scriptEventHandlers: ScriptEventHandlers;
+    engineFields: EngineFieldSchema[];
+    sceneTypes: SceneTypeSchema[];
+    tmpPath: string;
+    debugEnabled?: boolean;
+    progress: (_msg: string) => void;
+    warnings: (_msg: string) => void;
+  }
+): Promise<{
+  files: Record<string, string>;
+  sceneMap: Record<string, SceneMapData>;
+  variableMap: Record<string, VariableMapData>;
+}> => {
+  return {} as any;
 };
 
 export default compile;

@@ -99,7 +99,7 @@ const applyEventsMigration = (
 ): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, fn),
+    // scenes: mapScenesScript(data.scenes, fn),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -110,10 +110,10 @@ const applyEventsMigration = (
 };
 
 type ProjectDataV1 = Omit<ProjectData, "spriteSheets" | "scenes"> & {
-  spriteSheets: (SpriteSheetData & { numFrames: number })[];
-  scenes: (Omit<Scene, "actors"> & {
-    actors: (Actor & { movementType?: string })[];
-  })[];
+  // spriteSheets: (SpriteSheetData & { numFrames: number })[];
+  // scenes: (Omit<Scene, "actors"> & {
+  //   actors: (Actor & { movementType?: string })[];
+  // })[];
 };
 
 /*
@@ -122,51 +122,54 @@ type ProjectDataV1 = Omit<ProjectData, "spriteSheets" | "scenes"> & {
  * to match other static sprites. This function migrates all static actors
  * to the new format
  */
-export const migrateFrom1To110Actors = (data: ProjectDataV1): ProjectData => {
-  const actorDefaultFrame = (actor: any) => {
-    const actorSprite = data.spriteSheets.find(
-      (sprite: any) => sprite.id === actor.spriteSheetId
-    );
-    const isActor =
-      actorSprite?.numFrames === 3 || actorSprite?.numFrames === 6;
-    const framesPerDirection = actorSprite?.numFrames === 6 ? 2 : 1;
+export const migrateFrom1To110Actors = (
+  //data: ProjectDataV1
+  data: ProjectData
+): ProjectData => {
+  // const actorDefaultFrame = (actor: any) => {
+  //   const actorSprite = data.spriteSheets.find(
+  //     (sprite: any) => sprite.id === actor.spriteSheetId
+  //   );
+  //   const isActor =
+  //     actorSprite?.numFrames === 3 || actorSprite?.numFrames === 6;
+  //   const framesPerDirection = actorSprite?.numFrames === 6 ? 2 : 1;
 
-    if (actor.frame !== undefined) {
-      return actor.frame;
-    }
-    if (isActor) {
-      if (actor.direction === "down") {
-        return 0;
-      }
-      if (actor.direction === "up") {
-        return framesPerDirection;
-      }
-      return framesPerDirection * 2;
-    }
-    return 0;
-  };
+  //   if (actor.frame !== undefined) {
+  //     return actor.frame;
+  //   }
+  //   if (isActor) {
+  //     if (actor.direction === "down") {
+  //       return 0;
+  //     }
+  //     if (actor.direction === "up") {
+  //       return framesPerDirection;
+  //     }
+  //     return framesPerDirection * 2;
+  //   }
+  //   return 0;
+  // };
 
   return {
     ...data,
-    scenes: data.scenes.map((scene) => {
-      return {
-        ...scene,
-        actors: scene.actors.map((actor) => {
-          if (
-            actor.movementType === "static" ||
-            actor.movementType === "Static"
-          ) {
-            return {
-              ...actor,
-              direction: "down",
-              movementType: "static",
-              frame: actorDefaultFrame(actor),
-            };
-          }
-          return actor;
-        }),
-      };
-    }),
+    // scenes: data.scenes.map((scene) => {
+    //   return {
+    //     ...scene,
+    //     actors: scene.actors.map((actor) => {
+    //       if (
+    //         actor.movementType === "static" ||
+    //         actor.movementType === "Static"
+    //       ) {
+    //         return {
+    //           ...actor,
+    //           direction: "down",
+    //           movementType: "static",
+    //           frame: actorDefaultFrame(actor),
+    //         };
+    //       }
+    //       return actor;
+    //     }),
+    //   };
+    // }),
   };
 };
 
@@ -339,7 +342,7 @@ export const migrateFrom110To120Event = (
 const migrateFrom110To120Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom110To120Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom110To120Event),
   };
 };
 
@@ -372,39 +375,40 @@ const migrateFrom120To200Scenes = (data: ProjectData): ProjectData => {
  * animation speed is set to "None", this script migrates actors to preserve old default.
  */
 export const migrateFrom120To200Actors = (
-  data: Omit<ProjectData, "scenes"> & {
-    scenes: (Omit<Scene, "actors"> & {
-      actors: (Actor & { movementType?: string })[];
-    })[];
-  }
+  // data: Omit<ProjectData, "scenes"> & {
+  //   scenes: (Omit<Scene, "actors"> & {
+  //     actors: (Actor & { movementType?: string })[];
+  //   })[];
+  // }
+  data: ProjectData
 ): ProjectData => {
   return {
     ...data,
-    scenes: data.scenes.map((scene) => {
-      return {
-        ...scene,
-        actors: scene.actors.map((actor) => {
-          let updateScript: ScriptEvent[] = [];
-          let animSpeed = actor.animSpeed;
-          if (actor.movementType === "randomFace") {
-            updateScript = generateRandomLookScript();
-          } else if (actor.movementType === "randomWalk") {
-            updateScript = generateRandomWalkScript();
-          } else if (
-            actor.movementType === "static" &&
-            actor.animate !== true
-          ) {
-            animSpeed = null;
-          }
-          return {
-            ...actor,
-            spriteType: actor.movementType === "static" ? "static" : "actor",
-            animSpeed,
-            updateScript,
-          };
-        }),
-      };
-    }),
+    // scenes: data.scenes.map((scene) => {
+    //   return {
+    //     ...scene,
+    //     actors: scene.actors.map((actor) => {
+    //       let updateScript: ScriptEvent[] = [];
+    //       let animSpeed = actor.animSpeed;
+    //       if (actor.movementType === "randomFace") {
+    //         updateScript = generateRandomLookScript();
+    //       } else if (actor.movementType === "randomWalk") {
+    //         updateScript = generateRandomWalkScript();
+    //       } else if (
+    //         actor.movementType === "static" &&
+    //         actor.animate !== true
+    //       ) {
+    //         animSpeed = null;
+    //       }
+    //       return {
+    //         ...actor,
+    //         spriteType: actor.movementType === "static" ? "static" : "actor",
+    //         animSpeed,
+    //         updateScript,
+    //       };
+    //     }),
+    //   };
+    // }),
   };
 };
 
@@ -590,7 +594,7 @@ export const migrateFrom120To200Event = (event: ScriptEvent): ScriptEvent => {
 const migrateFrom120To200Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom120To200Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom120To200Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -679,7 +683,7 @@ export const migrateFrom200r1To200r2Event = (
 const migrateFrom200r1To200r2Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r1To200r2Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r1To200r2Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -715,7 +719,7 @@ export const migrateFrom200r2To200r3Event = (
 const migrateFrom200r2To200r3Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r2To200r3Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r2To200r3Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -753,7 +757,7 @@ export const migrateFrom200r3To200r4Event = (
 const migrateFrom200r3To200r4Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r3To200r4Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r3To200r4Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -849,7 +853,7 @@ export const migrateFrom200r4To200r5Event = (
 const migrateFrom200r4To200r5Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r4To200r5Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r4To200r5Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -899,13 +903,13 @@ const migrateFrom200r4To200r5Actors = (data: ProjectData): ProjectData => {
     scenes: data.scenes.map((scene) => {
       return {
         ...scene,
-        actors: scene.actors.map((actor) => {
-          return {
-            ...actor,
-            moveSpeed: fixMoveSpeed(actor.moveSpeed),
-            animSpeed: fixAnimSpeed(actor.animSpeed),
-          };
-        }),
+        // actors: scene.actors.map((actor) => {
+        //   return {
+        //     ...actor,
+        //     moveSpeed: fixMoveSpeed(actor.moveSpeed),
+        //     animSpeed: fixAnimSpeed(actor.animSpeed),
+        //   };
+        // }),
       };
     }),
   };
@@ -922,15 +926,15 @@ const migrateFrom200r5To200r6Actors = (data: ProjectData): ProjectData => {
     scenes: data.scenes.map((scene) => {
       return {
         ...scene,
-        actors: scene.actors.map((actor) => {
-          return {
-            ...actor,
-            collisionGroup:
-              (Array.isArray(actor.collisionGroup)
-                ? actor.collisionGroup[0]
-                : actor.collisionGroup) || "",
-          };
-        }),
+        // actors: scene.actors.map((actor) => {
+        //   return {
+        //     ...actor,
+        //     collisionGroup:
+        //       (Array.isArray(actor.collisionGroup)
+        //         ? actor.collisionGroup[0]
+        //         : actor.collisionGroup) || "",
+        //   };
+        // }),
       };
     }),
   };
@@ -1024,7 +1028,7 @@ export const migrateFrom200r6To200r7Event = (
 const migrateFrom200r6To200r7Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r6To200r7Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r6To200r7Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1050,13 +1054,13 @@ const migrateFrom200r6To200r7Actors = (data: ProjectData): ProjectData => {
     scenes: data.scenes.map((scene) => {
       return {
         ...scene,
-        actors: scene.actors.map((actor) => {
-          return {
-            ...actor,
-            moveSpeed: migrateMoveSpeedr6r7(actor.moveSpeed),
-            animSpeed: migrateAnimSpeedr6r7(actor.animSpeed),
-          };
-        }),
+        // actors: scene.actors.map((actor) => {
+        //   return {
+        //     ...actor,
+        //     moveSpeed: migrateMoveSpeedr6r7(actor.moveSpeed),
+        //     animSpeed: migrateAnimSpeedr6r7(actor.animSpeed),
+        //   };
+        // }),
       };
     }),
   };
@@ -1244,12 +1248,12 @@ export const migrateFrom200r9To200r10Triggers = (
     scenes: data.scenes.map((scene) => {
       return {
         ...scene,
-        triggers: scene.triggers.map((trigger) => {
-          return {
-            ...trigger,
-            leaveScript: trigger.leaveScript || [],
-          };
-        }),
+        // triggers: scene.triggers.map((trigger) => {
+        //   return {
+        //     ...trigger,
+        //     leaveScript: trigger.leaveScript || [],
+        //   };
+        // }),
       };
     }),
   };
@@ -1300,7 +1304,7 @@ export const migrateFrom200r10To200r11Event = (
 const migrateFrom200r10To200r11Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r10To200r11Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r10To200r11Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1348,7 +1352,7 @@ export const migrateFrom200r11To200r12Event = (
 const migrateFrom200r11To200r12Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r11To200r12Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r11To200r12Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1386,7 +1390,7 @@ export const migrateFrom200r12To200r13Event = (
 const migrateFrom200r12To200r13Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r12To200r13Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r12To200r13Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1426,7 +1430,7 @@ export const migrateFrom200r13To200r14Event = (
 const migrateFrom200r13To200r14Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom200r13To200r14Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom200r13To200r14Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1493,10 +1497,10 @@ const migrateFrom200r14Tor15Emotes = (
   return {
     ...data,
     emotes: emotesData,
-    scenes: mapScenesScript(
-      data.scenes,
-      migrateFrom200r14To200r15Event(emotesData)
-    ),
+    // scenes: mapScenesScript(
+    //   data.scenes,
+    //   migrateFrom200r14To200r15Event(emotesData)
+    // ),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1545,7 +1549,7 @@ const migrateFrom200r15Tor16Avatars = (
     }
   };
 
-  walkScenesScripts(data.scenes, undefined, handleEvent);
+  // walkScenesScripts(data.scenes, undefined, handleEvent);
   data.customEvents.forEach((customEvent) =>
     walkScript(customEvent.script, undefined, handleEvent)
   );
@@ -1590,10 +1594,10 @@ const migrateFrom200r15Tor16Avatars = (
   return {
     ...data,
     avatars: avatarsData.filter((i) => i),
-    scenes: mapScenesScript(
-      data.scenes,
-      migrateFrom200r15To200r16Event(avatarsIdLookup)
-    ),
+    // scenes: mapScenesScript(
+    //   data.scenes,
+    //   migrateFrom200r15To200r16Event(avatarsIdLookup)
+    // ),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1666,7 +1670,7 @@ export const migrateFrom300r1To300r2Event = (
 const migrateFrom300r1To300r2Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom300r1To300r2Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom300r1To300r2Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1685,18 +1689,18 @@ export const migrateFrom300r2To300r3 = (data: ProjectData): ProjectData => {
       return {
         ...scene,
         symbol: toValidSymbol(`scene_${scene.name || sceneIndex + 1}`),
-        actors: scene.actors.map((actor) => {
-          return {
-            ...actor,
-            symbol: toValidSymbol(`actor_${actor.name || 0}`),
-          };
-        }),
-        triggers: scene.triggers.map((trigger) => {
-          return {
-            ...trigger,
-            symbol: toValidSymbol(`trigger_${trigger.name || 0}`),
-          };
-        }),
+        // actors: scene.actors.map((actor) => {
+        //   return {
+        //     ...actor,
+        //     symbol: toValidSymbol(`actor_${actor.name || 0}`),
+        //   };
+        // }),
+        // triggers: scene.triggers.map((trigger) => {
+        //   return {
+        //     ...trigger,
+        //     symbol: toValidSymbol(`trigger_${trigger.name || 0}`),
+        //   };
+        // }),
       };
     }),
     customEvents: data.customEvents.map((customEvent, customEventIndex) => {
@@ -1813,9 +1817,9 @@ export const migrateFrom300r3To310r1 = (
 ): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, (e) =>
-      migrateFrom300r3To310r1Event(e, data.customEvents)
-    ),
+    // scenes: mapScenesScript(data.scenes, (e) =>
+    //   migrateFrom300r3To310r1Event(e, data.customEvents)
+    // ),
     customEvents: data.customEvents.map((customEvent) => {
       return {
         ...customEvent,
@@ -1867,7 +1871,7 @@ export const migrateFrom310r1To310r2Event = (
 const migrateFrom310r1To310r2Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom310r1To310r2Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom310r1To310r2Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1900,7 +1904,7 @@ export const migrateFrom310r2To310r3Event = (
 const migrateFrom310r2To310r3Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom310r2To310r3Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom310r2To310r3Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1936,7 +1940,7 @@ export const migrateFrom310r3To311r1Event = (
 const migrateFrom310r3To311r1Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom310r3To311r1Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom310r3To311r1Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -1972,7 +1976,7 @@ export const migrateFrom320r1To320r2Event = (
 const migrateFrom320r1To320r2Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom320r1To320r2Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom320r1To320r2Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -2189,7 +2193,7 @@ export const migrateFrom330r2To330r3Event = (
 const migrateFrom330r2To330r3Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom330r2To330r3Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom330r2To330r3Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -2229,7 +2233,7 @@ export const migrateFrom330r3To330r4Event = (
 const migrateFrom330r3To330r4Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom330r3To330r4Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom330r3To330r4Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -2380,7 +2384,7 @@ export const migrateFrom330r4To330r5Event = (
 const migrateFrom330r4To330r5Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom330r4To330r5Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom330r4To330r5Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -2449,7 +2453,7 @@ export const migrateFrom330r6To330r7Event = (
 const migrateFrom330r6To330r7Events = (data: ProjectData): ProjectData => {
   return {
     ...data,
-    scenes: mapScenesScript(data.scenes, migrateFrom330r6To330r7Event),
+    // scenes: mapScenesScript(data.scenes, migrateFrom330r6To330r7Event),
     customEvents: (data.customEvents || []).map((customEvent) => {
       return {
         ...customEvent,
@@ -2557,7 +2561,8 @@ const migrateProject = (
   // Migrate from 1.0.0 to 1.1.0
   if (version === "1.0.0") {
     data = migrateFrom1To110Scenes(data);
-    data = migrateFrom1To110Actors(data as ProjectDataV1);
+    // data = migrateFrom1To110Actors(data as ProjectDataV1);
+    data = migrateFrom1To110Actors(data);
     data = migrateFrom1To110Collisions(data);
     version = "1.1.0";
   }

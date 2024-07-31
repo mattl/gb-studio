@@ -77,7 +77,7 @@ interface Entity {
   name: string;
 }
 
-export type PrecompiledScene = Scene & {
+export type PrecompiledScene = Omit<Scene, "actors" | "triggers"> & {
   id: string;
   name: string;
   symbol: string;

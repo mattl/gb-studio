@@ -86,6 +86,8 @@ export const determineUsedAssets = ({
     }
   }
 
+  /*
+  // @TODO Replace with walkResourceScripts or equivalent 
   walkScenesScripts(
     projectData.scenes,
     {
@@ -130,6 +132,7 @@ export const determineUsedAssets = ({
       }
     }
   );
+  */
 
   return {
     referencedVariables: Object.values(usedVariablesLookup) as Variable[],

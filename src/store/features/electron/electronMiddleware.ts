@@ -72,7 +72,8 @@ const electronMiddleware: Middleware<Dispatch, RootState> =
         showNavigator: action.payload,
       });
     } else if (projectActions.loadProject.rejected.match(action)) {
-      API.project.close();
+      console.log("PROJECT LOAD FAILED");
+      // API.project.close();
     } else if (projectActions.closeProject.match(action)) {
       API.project.close();
     } else if (entitiesActions.removeCustomEvent.match(action)) {

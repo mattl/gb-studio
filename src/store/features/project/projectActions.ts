@@ -37,8 +37,12 @@ export const denormalizeProject = (project: {
   settings: SettingsState;
   metadata: MetadataState;
 }): ProjectResources => {
+  console.time("denormalizeProject");
   // @TODO Set this to return Readonly<ProjectResources>
   const entitiesData = denormalizeEntities(project.entities);
+  console.timeEnd("denormalizeProject");
+
+  console.log({ entitiesData });
   console.log({ entitiesData });
   return {
     ...entitiesData,

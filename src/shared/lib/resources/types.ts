@@ -48,17 +48,22 @@ export type SceneResource = Omit<
 
 export type ActorResource = Actor & {
   _resourceType: "actor";
+  _index: number;
 };
 
 export type TriggerResource = Trigger & {
   _resourceType: "trigger";
+  _index: number;
 };
 
 export type ScriptResource = CustomEvent & {
   _resourceType: "script";
 };
 
-export type CompressedBackgroundResource = Omit<Background, "tileColors"> & {
+export type CompressedBackgroundResource = Omit<
+  Background,
+  "tileColors" | "inode" | "_v"
+> & {
   _resourceType: "background";
   tileColors: string;
 };

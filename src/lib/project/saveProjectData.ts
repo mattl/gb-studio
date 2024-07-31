@@ -16,6 +16,10 @@ import { stripInvalidPathCharacters } from "shared/lib/helpers/stripInvalidFilen
 import type { ProjectData } from "store/features/project/projectActions";
 import { compress8bitNumberArray } from "shared/lib/resources/compression";
 import { CompressedProjectResources } from "shared/lib/resources/types";
+import keyBy from "lodash/keyBy";
+import promiseLimit from "lib/helpers/promiseLimit";
+
+const CONCURRENT_RESOURCE_SAVE_COUNT = 8;
 
 const globAsync = promisify(glob);
 
@@ -59,309 +63,315 @@ const entityToFilePath = (entity: Entity, nameOverride?: string): string => {
     .replace(/\s+/g, "_")}__${entity.id}`;
 };
 
+const actorToFileName = (actor: Entity, actorIndex: number): string => {
+  const name = actorName(actor, actorIndex);
+  return `${stripInvalidPathCharacters(name)
+    .toLocaleLowerCase()
+    .replace(/[/\\]/g, "_")
+    .replace(/\s+/g, "_")}__${actor.id}`;
+};
+
+const triggerToFileName = (trigger: Entity, triggerIndex: number): string => {
+  const name = triggerName(trigger, triggerIndex);
+  return `${stripInvalidPathCharacters(name)
+    .toLocaleLowerCase()
+    .replace(/[/\\]/g, "_")
+    .replace(/\s+/g, "_")}__${trigger.id}`;
+};
+
+const deepCleanAndCheckDirty = <T>(
+  obj: T
+): { cleanedObject: T; foundDirty: boolean } => {
+  let foundDirty = false;
+  function deepClean(obj: any): any {
+    if (obj !== null && typeof obj === "object") {
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          if (key === "__dirty" && obj[key] === true) {
+            foundDirty = true;
+            delete obj[key];
+          } else {
+            deepClean(obj[key]);
+          }
+        }
+      }
+    }
+    return obj;
+  }
+  const cleanedObject = deepClean(JSON.parse(JSON.stringify(obj)));
+  return { cleanedObject, foundDirty };
+};
+
 const saveProjectData = async (
   projectPath: string,
   projectResources: CompressedProjectResources
 ) => {
-  console.log("SAVING");
-  console.log(projectResources);
-  console.log(JSON.stringify(projectResources.scenes, null, 4));
+  console.log("SAVE PROJECT DATA" + projectPath);
 
-  throw new Error("SAVING BLOCKED FOR NOW");
-  // const projectFolder = Path.dirname(projectPath);
-  // const projectPartsFolder = Path.join(projectFolder, "project");
-  // const projectPartsTmpFolder = Path.join(projectFolder, "project.sav");
-  // const projectPartsBckFolder = Path.join(projectFolder, "project.bak");
-  // const projectResFilename = Path.join(projectFolder, `project.gbsres`);
-  // const variablesResFilename = Path.join(`variables.gbsres`);
-  // const settingsResFilename = Path.join(`settings.gbsres`);
-  // const userSettingsResFilename = Path.join(`user_settings.gbsres`);
-  // const engineFieldValuesResFilename = Path.join(`engine_field_values.gbsres`);
-  // // await rmdir(projectFolder);
-  // const scenesFolder = Path.join("scenes");
-  // const backgroundsFolder = Path.join("backgrounds");
-  // const spritesFolder = Path.join("sprites");
-  // const palettesFolder = Path.join("palettes");
-  // const scriptsFolder = Path.join("scripts");
-  // const musicFolder = Path.join("music");
-  // const soundsFolder = Path.join("sounds");
-  // const emotesFolder = Path.join("emotes");
-  // const avatarsFolder = Path.join("avatars");
-  // const tilesetsFolder = Path.join("tilesets");
-  // const fontsFolder = Path.join("fonts");
+  // throw new Error("SAVING BLOCKED FOR NOW");
+  const projectFolder = Path.dirname(projectPath);
+  const projectPartsFolder = Path.join(projectFolder, "project");
+  const projectPartsBckFolder = Path.join(projectFolder, "project.bak");
+  const projectResFilename = Path.join(projectFolder, `project.gbsres`);
+  const variablesResFilename = Path.join(`variables.gbsres`);
+  const settingsResFilename = Path.join(`settings.gbsres`);
+  const userSettingsResFilename = Path.join(`user_settings.gbsres`);
+  const engineFieldValuesResFilename = Path.join(`engine_field_values.gbsres`);
 
-  // const existingPath = Path.join(projectPartsFolder, "**/*.gbsres");
-  // const existingResourcePaths = new Set(
-  //   (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
-  //     (path) => Path.relative(projectPartsFolder, path)
-  //   )
-  // );
-  // const newResourcePaths: Set<string> = new Set();
+  const scenesFolder = Path.join("scenes");
+  const backgroundsFolder = Path.join("backgrounds");
+  const spritesFolder = Path.join("sprites");
+  const palettesFolder = Path.join("palettes");
+  const scriptsFolder = Path.join("scripts");
+  const musicFolder = Path.join("music");
+  const soundsFolder = Path.join("sounds");
+  const emotesFolder = Path.join("emotes");
+  const avatarsFolder = Path.join("avatars");
+  const tilesetsFolder = Path.join("tilesets");
+  const fontsFolder = Path.join("fonts");
 
-  // let forceWrite = true;
-  // if (await pathExists(projectPartsFolder)) {
-  //   await copy(projectPartsFolder, projectPartsBckFolder);
-  //   await copy(projectPartsFolder, projectPartsTmpFolder);
-  //   forceWrite = false;
-  // }
+  const existingPath = Path.join(projectPartsFolder, "**/*.gbsres");
+  const existingResourcePaths = new Set(
+    (await globAsync(Path.join(projectPartsFolder, "**/*.gbsres"))).map(
+      (path) => Path.relative(projectPartsFolder, path)
+    )
+  );
+  const newResourcePaths: Set<string> = new Set();
 
-  // const writeResource = async <T extends Record<string, unknown>>(
-  //   filename: string,
-  //   resourceType: string,
-  //   resource: T
-  // ) => {
-  //   newResourcePaths.add(filename);
-  //   if (
-  //     forceWrite ||
-  //     resource.__dirty ||
-  //     !existingResourcePaths.has(filename)
-  //   ) {
-  //     const filePath = Path.join(projectPartsTmpFolder, filename);
-  //     await ensureDir(Path.dirname(filePath));
-  //     console.log(
-  //       "TRYING TO WRITE",
-  //       resourceType,
-  //       resource.id,
-  //       resource,
-  //       "TO",
-  //       filePath
-  //     );
-  //     // await writeFileAndFlushAsync(
-  //     //   filePath,
-  //     //   encodeResource(resourceType, resource)
-  //     // );
-  //   }
-  // };
+  let forceWrite = true;
+  if (await pathExists(projectPartsFolder)) {
+    await copy(projectPartsFolder, projectPartsBckFolder);
+    forceWrite = false;
+  }
 
-  // let sceneIndex = 0;
-  // for (const scene of project.scenes) {
-  //   const sceneFolder = Path.join(
-  //     scenesFolder,
-  //     `${entityToFilePath(scene, sceneName(scene, sceneIndex))}`
-  //   );
-  //   const actorsFolder = Path.join(sceneFolder, "actors");
-  //   const triggersFolder = Path.join(sceneFolder, "triggers");
-  //   const sceneFilename = Path.join(sceneFolder, `scene.gbsres`);
+  const writeBuffer: { path: string; data: string }[] = [];
 
-  //   if (scene.actors.length > 0) {
-  //     let actorIndex = 0;
-  //     for (const actor of scene.actors) {
-  //       const actorFilename = Path.join(
-  //         actorsFolder,
-  //         `${entityToFilePath(actor, actorName(actor, actorIndex))}.gbsres`
-  //       );
-  //       await writeResource(actorFilename, "actor", actor);
-  //       actorIndex++;
-  //     }
-  //   }
+  const writeResource = async <T extends Record<string, unknown>>(
+    filename: string,
+    resourceType: string,
+    resource: T
+  ) => {
+    newResourcePaths.add(filename);
 
-  //   if (scene.triggers.length > 0) {
-  //     let triggerIndex = 0;
-  //     for (const trigger of scene.triggers) {
-  //       const triggerFilename = Path.join(
-  //         triggersFolder,
-  //         `${entityToFilePath(
-  //           trigger,
-  //           triggerName(trigger, triggerIndex)
-  //         )}.gbsres`
-  //       );
-  //       await writeResource(triggerFilename, "trigger", trigger);
-  //       triggerIndex++;
-  //     }
-  //   }
+    const { foundDirty, cleanedObject } = deepCleanAndCheckDirty(resource);
 
-  //   await writeResource(sceneFilename, "scene", {
-  //     ...scene,
-  //     // actors: scene.actors.map((e) => e.id),
-  //     // triggers: scene.triggers.map((e) => e.id),
-  //     actors: undefined,
-  //     triggers: undefined,
-  //     collisions: stringify8bitArray(scene.collisions, scene.width),
-  //     // tileColors: stringify8bitArray(scene.tileColors, scene.width)
-  //     tileColors: undefined,
-  //   });
-  //   sceneIndex++;
-  // }
+    if (forceWrite || foundDirty || !existingResourcePaths.has(filename)) {
+      const filePath = Path.join(projectPartsFolder, filename);
+      await ensureDir(Path.dirname(filePath));
+      writeBuffer.push({
+        path: filePath,
+        data: encodeResource(resourceType, cleanedObject),
+      });
+    }
+  };
 
-  // let backgroundIndex = 0;
-  // for (const background of project.backgrounds) {
-  //   const backgroundFilename = Path.join(
-  //     backgroundsFolder,
-  //     `${entityToFilePath(background)}.gbsres`
-  //   );
-  //   await writeResource(backgroundFilename, "background", {
-  //     ...background,
-  //     tileColors: stringify8bitArray(background.tileColors, background.width),
-  //   });
-  //   backgroundIndex++;
-  // }
+  const actorsLookup = keyBy(projectResources.actors, "id");
+  const triggersLookup = keyBy(projectResources.triggers, "id");
 
-  // let spriteIndex = 0;
-  // for (const sprite of project.spriteSheets) {
-  //   const spriteFilename = Path.join(
-  //     spritesFolder,
-  //     `${entityToFilePath(sprite)}.gbsres`
-  //   );
-  //   await writeResource(spriteFilename, "sprite", {
-  //     ...sprite,
-  //   });
-  //   spriteIndex++;
-  // }
+  let sceneIndex = 0;
+  for (const scene of projectResources.scenes) {
+    const sceneFolder = Path.join(
+      scenesFolder,
+      `${entityToFilePath(scene, sceneName(scene, sceneIndex))}`
+    );
+    const actorsFolder = Path.join(sceneFolder, "actors");
+    const triggersFolder = Path.join(sceneFolder, "triggers");
+    const sceneFilename = Path.join(sceneFolder, `scene.gbsres`);
 
-  // let paletteIndex = 0;
-  // for (const palette of project.palettes) {
-  //   const paletteFilename = Path.join(
-  //     palettesFolder,
-  //     `${entityToFilePath(palette, paletteName(palette, paletteIndex))}.gbsres`
-  //   );
-  //   await writeResource(paletteFilename, "palette", {
-  //     ...palette,
-  //   });
+    if (scene.actors.length > 0) {
+      let actorIndex = 0;
+      for (const actorId of scene.actors) {
+        const actor = actorsLookup[actorId];
+        if (actor) {
+          const actorFilename = Path.join(
+            actorsFolder,
+            `${actorToFileName(actor, actorIndex)}.gbsres`
+          );
+          await writeResource(actorFilename, "actor", {
+            ...actor,
+            _index: actorIndex,
+          });
+          actorIndex++;
+        }
+      }
+    }
 
-  //   paletteIndex++;
-  // }
+    if (scene.triggers.length > 0) {
+      let triggerIndex = 0;
+      for (const triggerId of scene.triggers) {
+        const trigger = triggersLookup[triggerId];
+        if (trigger) {
+          const triggerFilename = Path.join(
+            triggersFolder,
+            `${triggerToFileName(trigger, triggerIndex)}.gbsres`
+          );
+          await writeResource(triggerFilename, "trigger", {
+            ...trigger,
+            _index: triggerIndex,
+          });
+          triggerIndex++;
+        }
+      }
+    }
 
-  // let scriptIndex = 0;
-  // for (const script of project.customEvents) {
-  //   const scriptFilename = Path.join(
-  //     scriptsFolder,
-  //     `${entityToFilePath(script, customEventName(script, scriptIndex))}.gbsres`
-  //   );
-  //   await writeResource(scriptFilename, "script", {
-  //     ...script,
-  //   });
+    await writeResource(sceneFilename, "scene", {
+      ...scene,
+      actors: undefined,
+      triggers: undefined,
+      tileColors: undefined,
+    });
+    sceneIndex++;
+  }
 
-  //   scriptIndex++;
-  // }
+  let backgroundIndex = 0;
+  for (const background of projectResources.backgrounds) {
+    const backgroundFilename = Path.join(
+      backgroundsFolder,
+      `${entityToFilePath(background)}.gbsres`
+    );
+    await writeResource(backgroundFilename, "background", background);
+    backgroundIndex++;
+  }
 
-  // let songIndex = 0;
-  // for (const song of project.music) {
-  //   const songFilename = Path.join(
-  //     musicFolder,
-  //     `${entityToFilePath(song)}.gbsres`
-  //   );
-  //   await writeResource(songFilename, "music", {
-  //     ...song,
-  //   });
+  let spriteIndex = 0;
+  for (const sprite of projectResources.sprites) {
+    const spriteFilename = Path.join(
+      spritesFolder,
+      `${entityToFilePath(sprite)}.gbsres`
+    );
+    await writeResource(spriteFilename, "sprite", sprite);
+    spriteIndex++;
+  }
 
-  //   songIndex++;
-  // }
+  let paletteIndex = 0;
+  for (const palette of projectResources.palettes) {
+    const paletteFilename = Path.join(
+      palettesFolder,
+      `${entityToFilePath(palette, paletteName(palette, paletteIndex))}.gbsres`
+    );
+    await writeResource(paletteFilename, "palette", palette);
+    paletteIndex++;
+  }
 
-  // let soundIndex = 0;
-  // for (const sound of project.sounds) {
-  //   const soundFilename = Path.join(
-  //     soundsFolder,
-  //     `${entityToFilePath(sound)}.gbsres`
-  //   );
-  //   await writeResource(soundFilename, "sound", {
-  //     ...sound,
-  //   });
+  let scriptIndex = 0;
+  for (const script of projectResources.scripts) {
+    const scriptFilename = Path.join(
+      scriptsFolder,
+      `${entityToFilePath(script, customEventName(script, scriptIndex))}.gbsres`
+    );
+    await writeResource(scriptFilename, "script", script);
+    scriptIndex++;
+  }
 
-  //   soundIndex++;
-  // }
+  let songIndex = 0;
+  for (const song of projectResources.music) {
+    const songFilename = Path.join(
+      musicFolder,
+      `${entityToFilePath(song)}.gbsres`
+    );
+    await writeResource(songFilename, "music", song);
+    songIndex++;
+  }
 
-  // let emoteIndex = 0;
-  // for (const emote of project.emotes) {
-  //   const emoteFilename = Path.join(
-  //     emotesFolder,
-  //     `${entityToFilePath(emote)}.gbsres`
-  //   );
-  //   await writeResource(emoteFilename, "emote", {
-  //     ...emote,
-  //   });
-  //   emoteIndex++;
-  // }
+  let soundIndex = 0;
+  for (const sound of projectResources.sounds) {
+    const soundFilename = Path.join(
+      soundsFolder,
+      `${entityToFilePath(sound)}.gbsres`
+    );
+    await writeResource(soundFilename, "sound", sound);
+    soundIndex++;
+  }
 
-  // let avatarIndex = 0;
-  // for (const avatar of project.avatars) {
-  //   const avatarFilename = Path.join(
-  //     avatarsFolder,
-  //     `${entityToFilePath(avatar)}.gbsres`
-  //   );
-  //   await writeResource(avatarFilename, "avatar", {
-  //     ...avatar,
-  //   });
+  let emoteIndex = 0;
+  for (const emote of projectResources.emotes) {
+    const emoteFilename = Path.join(
+      emotesFolder,
+      `${entityToFilePath(emote)}.gbsres`
+    );
+    await writeResource(emoteFilename, "emote", emote);
+    emoteIndex++;
+  }
 
-  //   avatarIndex++;
-  // }
+  let avatarIndex = 0;
+  for (const avatar of projectResources.avatars) {
+    const avatarFilename = Path.join(
+      avatarsFolder,
+      `${entityToFilePath(avatar)}.gbsres`
+    );
+    await writeResource(avatarFilename, "avatar", avatar);
+    avatarIndex++;
+  }
 
-  // let tilesetIndex = 0;
-  // for (const tileset of project.tilesets) {
-  //   const tilesetFilename = Path.join(
-  //     tilesetsFolder,
-  //     `${entityToFilePath(tileset)}.gbsres`
-  //   );
-  //   await writeResource(tilesetFilename, "tileset", {
-  //     ...tileset,
-  //   });
+  let tilesetIndex = 0;
+  for (const tileset of projectResources.tilesets) {
+    const tilesetFilename = Path.join(
+      tilesetsFolder,
+      `${entityToFilePath(tileset)}.gbsres`
+    );
+    await writeResource(tilesetFilename, "tileset", tileset);
+    tilesetIndex++;
+  }
 
-  //   tilesetIndex++;
-  // }
+  let fontIndex = 0;
+  for (const font of projectResources.fonts) {
+    const fontFilename = Path.join(
+      fontsFolder,
+      `${entityToFilePath(font)}.gbsres`
+    );
+    await writeResource(fontFilename, "font", font);
+    fontIndex++;
+  }
 
-  // let fontIndex = 0;
-  // for (const font of project.fonts) {
-  //   const fontFilename = Path.join(
-  //     fontsFolder,
-  //     `${entityToFilePath(font)}.gbsres`
-  //   );
-  //   await writeResource(fontFilename, "font", {
-  //     ...font,
-  //   });
+  await writeResource(settingsResFilename, "settings", {
+    ...projectResources.settings,
+    worldScrollX: undefined,
+    worldScrollY: undefined,
+    zoom: undefined,
+  });
 
-  //   fontIndex++;
-  // }
+  await writeResource(userSettingsResFilename, "settings", {
+    worldScrollX: projectResources.settings.worldScrollX,
+    worldScrollY: projectResources.settings.worldScrollY,
+    zoom: projectResources.settings.zoom,
+  });
 
-  // await writeResource(settingsResFilename, "settings", {
-  //   ...project.settings,
-  //   worldScrollX: undefined,
-  //   worldScrollY: undefined,
-  //   zoom: undefined,
-  // });
+  await writeResource(
+    variablesResFilename,
+    "variables",
+    projectResources.variables
+  );
 
-  // await writeResource(userSettingsResFilename, "settings", {
-  //   worldScrollX: project.settings.worldScrollX,
-  //   worldScrollY: project.settings.worldScrollY,
-  //   zoom: project.settings.zoom,
-  // });
+  await writeResource(
+    engineFieldValuesResFilename,
+    "engineFieldValues",
+    projectResources.engineFieldValues
+  );
 
-  // await writeResource(variablesResFilename, "variables", {
-  //   ...project.variables,
-  // });
+  console.log("WRITE BUFFER SIZE=" + writeBuffer.length);
+  console.time("Flush Write Buffer");
+  await promiseLimit(
+    CONCURRENT_RESOURCE_SAVE_COUNT,
+    writeBuffer.map(({ path, data }) => async () => {
+      await writeFileAndFlushAsync(path, data);
+    })
+  );
+  console.timeEnd("Flush Write Buffer");
 
-  // await writeResource(engineFieldValuesResFilename, "engineFieldValues", {
-  //   ...project.engineFieldValues,
-  // });
+  await writeFileWithBackupAsync(
+    projectResFilename,
+    encodeResource("project", projectResources.metadata)
+  );
 
-  // await writeFileWithBackupAsync(
-  //   projectResFilename,
-  //   encodeResource("project", {
-  //     ...project,
-  //     scenes: undefined,
-  //     backgrounds: undefined,
-  //     spriteSheets: undefined,
-  //     palettes: undefined,
-  //     customEvents: undefined,
-  //     music: undefined,
-  //     sounds: undefined,
-  //     emotes: undefined,
-  //     avatars: undefined,
-  //     fonts: undefined,
-  //     tilesets: undefined,
-  //     variables: undefined,
-  //     engineFieldValues: undefined,
-  //     settings: undefined,
-  //   })
-  // );
+  const resourceDiff = Array.from(existingResourcePaths).filter(
+    (path) => !newResourcePaths.has(path)
+  );
 
-  // const resourceDiff = Array.from(existingResourcePaths).filter(
-  //   (path) => !newResourcePaths.has(path)
-  // );
-
-  // // Remove previous project files that are no longer needed
-  // for (const path of resourceDiff) {
-  //   const removePath = Path.join(projectPartsTmpFolder, path);
-  //   await remove(removePath);
-  // }
+  // Remove previous project files that are no longer needed
+  for (const path of resourceDiff) {
+    const removePath = Path.join(projectPartsFolder, path);
+    await remove(removePath);
+  }
 
   // await move(projectPartsTmpFolder, projectPartsFolder, { overwrite: true });
 

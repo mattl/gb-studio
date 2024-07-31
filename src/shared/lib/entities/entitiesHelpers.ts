@@ -4,7 +4,7 @@ import cloneDeep from "lodash/cloneDeep";
 import {
   ProjectEntitiesData,
   EntitiesState,
-  SpriteSheet,
+  SpriteSheetNormalized,
   Metasprite,
   MetaspriteTile,
   SpriteAnimation,
@@ -32,6 +32,11 @@ import {
   Tileset,
   CustomEventVariable,
   CustomEventActor,
+  Actor,
+  Scene,
+  CustomEvent,
+  Trigger,
+  SpriteSheet,
 } from "shared/lib/entities/entitiesTypes";
 import {
   Dictionary,
@@ -71,7 +76,7 @@ export interface NormalizedEntities {
   triggers: Record<EntityId, TriggerNormalized>;
   scriptEvents: Record<EntityId, ScriptEventNormalized>;
   backgrounds: Record<EntityId, Background>;
-  spriteSheets: Record<EntityId, SpriteSheet>;
+  spriteSheets: Record<EntityId, SpriteSheetNormalized>;
   metasprites: Record<EntityId, Metasprite>;
   metaspriteTiles: Record<EntityId, MetaspriteTile>;
   spriteAnimations: Record<EntityId, SpriteAnimation>;
@@ -94,7 +99,7 @@ export interface NormalizedEntities2 {
   triggers: Record<EntityId, TriggerNormalized>;
   scriptEvents: Record<EntityId, ScriptEventNormalized>;
   backgrounds: Record<EntityId, Background>;
-  sprites: Record<EntityId, SpriteSheet>;
+  sprites: Record<EntityId, SpriteSheetNormalized>;
   metasprites: Record<EntityId, Metasprite>;
   metaspriteTiles: Record<EntityId, MetaspriteTile>;
   spriteAnimations: Record<EntityId, SpriteAnimation>;
@@ -157,6 +162,28 @@ export type NormalizedData2 = NormalizedSchema<
 >;
 
 type NamedEntity = { name: string };
+
+export interface DenormalizedEntities {
+  actors: Actor[];
+  avatars: Avatar[];
+  backgrounds: Background[];
+  emotes: Emote[];
+  engineFieldValues: {
+    engineFieldValues: EngineFieldValue[];
+  };
+  fonts: Font[];
+  music: Music[];
+  palettes: Palette[];
+  scenes: Scene[];
+  scripts: CustomEvent[];
+  sounds: Sound[];
+  sprites: SpriteSheet[];
+  tilesets: Tileset[];
+  triggers: Trigger[];
+  variables: {
+    variables: Variable[];
+  };
+}
 
 const inodeToAssetCache: Dictionary<Asset> = {};
 
@@ -275,7 +302,7 @@ export const denormalizeEntities = (
     actors: state.actors.ids,
     triggers: state.triggers.ids,
     backgrounds: state.backgrounds.ids,
-    spriteSheets: state.spriteSheets.ids,
+    sprites: state.spriteSheets.ids,
     palettes: state.palettes.ids,
     scripts: state.customEvents.ids,
     music: state.music.ids,
@@ -296,7 +323,10 @@ export const denormalizeEntities = (
       ScriptEventNormalized
     >,
     backgrounds: state.backgrounds.entities as Record<EntityId, Background>,
-    sprites: state.spriteSheets.entities as Record<EntityId, SpriteSheet>,
+    sprites: state.spriteSheets.entities as Record<
+      EntityId,
+      SpriteSheetNormalized
+    >,
     metasprites: state.metasprites.entities as Record<EntityId, Metasprite>,
     metaspriteTiles: state.metaspriteTiles.entities as Record<
       EntityId,
@@ -328,7 +358,50 @@ export const denormalizeEntities = (
       EngineFieldValue
     >,
   };
-  return denormalize(input, resourcesSchema, entities);
+  const denormalizedEntities: DenormalizedEntities = denormalize(
+    input,
+    resourcesSchema,
+    entities
+  );
+
+  const entityToResource =
+    <R extends string>(resourceType: R) =>
+    <T>(entity: T): T & { _resourceType: R } => ({
+      _resourceType: resourceType,
+      ...entity,
+      inode: undefined,
+      _v: undefined,
+    });
+
+  const denormalizedEntityResources: ProjectEntityResources = {
+    scenes: denormalizedEntities.scenes.map(entityToResource("scene")),
+    actors: denormalizedEntities.actors.map((actor, actorIndex) => ({
+      ...entityToResource("actor")(actor),
+      _index: 0,
+    })),
+    triggers: denormalizedEntities.triggers.map((trigger, triggerIndex) => ({
+      ...entityToResource("trigger")(trigger),
+      _index: 0,
+    })),
+    backgrounds: denormalizedEntities.backgrounds.map(
+      entityToResource("background")
+    ),
+    sprites: denormalizedEntities.sprites.map(entityToResource("sprite")),
+    music: denormalizedEntities.music.map(entityToResource("music")),
+    scripts: denormalizedEntities.scripts.map(entityToResource("script")),
+    palettes: denormalizedEntities.palettes.map(entityToResource("palette")),
+    emotes: denormalizedEntities.emotes.map(entityToResource("emote")),
+    avatars: denormalizedEntities.avatars.map(entityToResource("avatar")),
+    fonts: denormalizedEntities.fonts.map(entityToResource("font")),
+    tilesets: denormalizedEntities.tilesets.map(entityToResource("tileset")),
+    sounds: denormalizedEntities.sounds.map(entityToResource("sound")),
+    engineFieldValues: entityToResource("engineFieldValues")(
+      denormalizedEntities.engineFieldValues
+    ),
+    variables: entityToResource("variables")(denormalizedEntities.variables),
+  };
+
+  return denormalizedEntityResources;
 };
 
 export const denormalizeSprite = ({
@@ -338,7 +411,7 @@ export const denormalizeSprite = ({
   spriteAnimations,
   spriteStates,
 }: {
-  sprite: SpriteSheet;
+  sprite: SpriteSheetNormalized;
   metasprites: Dictionary<Metasprite>;
   metaspriteTiles: Dictionary<MetaspriteTile>;
   spriteAnimations: Dictionary<SpriteAnimation>;

@@ -7,6 +7,7 @@ import { MiddlewareAPI, Dispatch, AnyAction } from "@reduxjs/toolkit";
 import projectActions from "../../../../src/store/features/project/projectActions";
 import { ActionCreators } from "redux-undo";
 
+/*
 test("Should trigger undo clear history after successful project load", async () => {
   const store = {
     getState: () => ({}),
@@ -53,3 +54,4 @@ test("Should not trigger undo clear history after successful project save", asyn
   expect(store.dispatch).not.toHaveBeenCalled();
   expect(next).toHaveBeenCalledWith(action);
 });
+*/

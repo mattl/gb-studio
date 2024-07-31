@@ -114,6 +114,7 @@ import { fileExists } from "lib/helpers/fs/fileExists";
 import confirmDeleteAsset from "lib/electron/dialog/confirmDeleteAsset";
 import { getPatronsFromGithub } from "lib/credits/getPatronsFromGithub";
 import { CompressedProjectResources } from "shared/lib/resources/types";
+import { decompressProjectResources } from "shared/lib/resources/compression";
 
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -1208,8 +1209,14 @@ ipcMain.handle(
 
 ipcMain.handle(
   "project:build",
-  async (event, project: ProjectData, options: BuildOptions) => {
+  async (
+    event,
+    compressedProject: CompressedProjectResources,
+    options: BuildOptions
+  ) => {
     cancelBuild = false;
+
+    const project = decompressProjectResources(compressedProject);
 
     const { exportBuild, buildType, sceneTypes } = options;
     const buildStartTime = Date.now();
@@ -1223,6 +1230,7 @@ ipcMain.handle(
     const colorOnly = project.settings.colorMode === "color";
     const gameFile = colorOnly ? "game.gbc" : "game.gb";
 
+    /*
     try {
       const compiledData = await buildProject(project, {
         ...options,
@@ -1319,6 +1327,7 @@ ipcMain.handle(
       }
       throw e;
     }
+      */
   }
 );
 
@@ -1360,13 +1369,16 @@ ipcMain.handle(
   "project:export",
   async (
     event,
-    project: ProjectData,
+    compressedProject: CompressedProjectResources,
     engineFields: EngineFieldSchema[],
     sceneTypes: SceneTypeSchema[],
     exportType: ProjectExportType
   ) => {
     const buildStartTime = Date.now();
 
+    const project = decompressProjectResources(compressedProject);
+
+    /*
     try {
       const projectRoot = Path.dirname(projectPath);
       const outputRoot = Path.normalize(`${getTmp()}/${buildUUID}`);
@@ -1436,6 +1448,7 @@ ipcMain.handle(
       }
       throw e;
     }
+    */
   }
 );
 

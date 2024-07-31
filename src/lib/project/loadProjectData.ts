@@ -79,6 +79,19 @@ const sortByName = (a: { name: string }, b: { name: string }) => {
   return 0;
 };
 
+const sortByIndex = (
+  a: { data: { _index: number } },
+  b: { data: { _index: number } }
+) => {
+  if (a.data._index < b.data._index) {
+    return -1;
+  }
+  if (a.data._index > b.data._index) {
+    return 1;
+  }
+  return 0;
+};
+
 const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const projectRoot = path.dirname(projectPath);
 
@@ -179,7 +192,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build actorsBySceneFolderLookup");
   const actorSubFolder = `${path.posix.sep}actors${path.posix.sep}`;
   const actorsBySceneFolderLookup = groupBy(
-    resourcesLookup.actor ?? [],
+    (resourcesLookup.actor ?? []).sort(sortByIndex),
     (row) => {
       const actorFolderIndex = row.path.lastIndexOf(actorSubFolder);
       return row.path.substring(0, actorFolderIndex);
@@ -192,7 +205,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.time("loadProjectData.loadProject build triggersBySceneFolderLookup");
   const triggerSubFolder = `${path.posix.sep}triggers${path.posix.sep}`;
   const triggersBySceneFolderLookup = groupBy(
-    resourcesLookup.trigger ?? [],
+    (resourcesLookup.trigger ?? []).sort(sortByIndex),
     (row) => {
       const triggerFolderIndex = row.path.lastIndexOf(triggerSubFolder);
       return row.path.substring(0, triggerFolderIndex);
