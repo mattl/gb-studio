@@ -13,15 +13,11 @@ export const checksumFile = (path: string): Promise<string> => {
 };
 
 export const checksumMD5File = (path: string): Promise<string> => {
-  console.log("CHECKSUM FILE", path);
   return new Promise((resolve, reject) => {
     const spark = new SparkMD5.ArrayBuffer();
     const stream = createReadStream(path);
     stream.on("error", (err) => reject(err));
-    stream.on("data", (chunk: ArrayBuffer) => {
-      console.log("GOT CHUNK", chunk);
-      spark.append(chunk);
-    });
+    stream.on("data", (chunk: ArrayBuffer) => spark.append(chunk));
     stream.on("end", () => resolve(spark.end()));
   });
 };

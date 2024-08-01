@@ -17,7 +17,6 @@ export const buildCompressedProjectResourcesPatch = (
   const dirtyWriteBuffer = writeBuffer.filter((writeFile) => {
     const newChecksum = writeFile.checksum;
     const oldChecksum = checksums[writeFile.path];
-    console.log({ newChecksum, oldChecksum, path: writeFile.path });
     return newChecksum !== oldChecksum;
   });
   console.timeEnd("buildCompressedProjectResourcesPatch dirtyWriteBuffer");

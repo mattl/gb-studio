@@ -1,37 +1,12 @@
-import fs from "fs-extra";
 import path from "path";
-import {
-  CompressedProjectResources,
-  CompressedSceneResourceWithChildren,
-  EngineFieldValuesResource,
-  ProjectMetadataResource,
-  SettingsResource,
-  VariablesResource,
-} from "shared/lib/resources/types";
 import glob from "glob";
 import { promisify } from "util";
 import promiseLimit from "lib/helpers/promiseLimit";
-import groupBy from "lodash/groupBy";
-import type { Dictionary } from "lodash";
-import { defaultProjectSettings } from "consts";
 import { checksumMD5File } from "lib/helpers/checksum";
 
 const globAsync = promisify(glob);
 
-const CONCURRENT_RESOURCE_LOAD_COUNT = 8;
-
-const sortByIndex = (
-  a: { data: { _index: number } },
-  b: { data: { _index: number } }
-) => {
-  if (a.data._index < b.data._index) {
-    return -1;
-  }
-  if (a.data._index > b.data._index) {
-    return 1;
-  }
-  return 0;
-};
+const CONCURRENT_RESOURCE_LOAD_COUNT = 16;
 
 export const loadProjectResourceChecksums = async (
   projectPath: string
@@ -60,8 +35,6 @@ export const loadProjectResourceChecksums = async (
     })
   );
   console.timeEnd("loadProjectResourceHashes.loadProject readResources2");
-  console.log("GOT RESORUCES ");
-  console.log(resources);
   return resources.reduce((memo, { path, data }) => {
     memo[path] = data;
     return memo;
