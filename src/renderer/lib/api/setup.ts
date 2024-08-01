@@ -18,7 +18,6 @@ import type {
   EngineFieldSchema,
   SceneTypeSchema,
 } from "store/features/engine/engineState";
-import type { ProjectData } from "store/features/project/projectActions";
 import type { SettingsState } from "store/features/settings/settingsState";
 import type {
   Background,
@@ -44,7 +43,10 @@ import type { TilesetAssetData } from "lib/project/loadTilesetData";
 import type { Asset, AssetType } from "shared/lib/helpers/assets";
 import type { Patrons } from "scripts/fetchPatrons";
 import type { LoadProjectResult } from "lib/project/loadProjectData";
-import { WriteResourcesPatch } from "shared/lib/resources/types";
+import {
+  ProjectResources,
+  WriteResourcesPatch,
+} from "shared/lib/resources/types";
 
 interface L10NLookup {
   [key: string]: string | boolean | undefined;
@@ -198,7 +200,7 @@ const APISetup = {
     updateProjectWindowMenu: (settings: SettingsState) =>
       ipcRenderer.invoke("project:update-project-window-menu", settings),
     close: () => ipcRenderer.invoke("close-project"),
-    build: (data: ProjectData, options: BuildOptions) =>
+    build: (data: ProjectResources, options: BuildOptions) =>
       ipcRenderer.invoke("project:build", data, options),
     buildCancel: () => ipcRenderer.invoke("project:build-cancel"),
     onBuildLog: (
@@ -209,7 +211,7 @@ const APISetup = {
     ) => ipcRenderer.on("build:error", listener),
     ejectEngine: () => ipcRenderer.invoke("project:engine-eject"),
     exportProject: (
-      data: ProjectData,
+      data: ProjectResources,
       engineFields: EngineFieldSchema[],
       sceneTypes: SceneTypeSchema[],
       exportType: ProjectExportType

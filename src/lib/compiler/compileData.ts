@@ -120,6 +120,7 @@ import { walkSceneScripts, walkScenesScripts } from "shared/lib/scripts/walk";
 import { ScriptEventHandlers } from "lib/project/loadScriptEventHandlers";
 import { EntityType } from "shared/lib/scripts/context";
 import compileTilesets from "lib/compiler/compileTilesets";
+import { ProjectResources } from "shared/lib/resources/types";
 
 type CompiledTilemapData = {
   symbol: string;
@@ -2078,7 +2079,7 @@ const compile = async (
 */
 
 const compile = async (
-  projectData: ProjectData,
+  projectData: ProjectResources,
   {
     projectRoot = "/tmp",
     scriptEventHandlers,

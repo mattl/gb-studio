@@ -115,6 +115,7 @@ import confirmDeleteAsset from "lib/electron/dialog/confirmDeleteAsset";
 import { getPatronsFromGithub } from "lib/credits/getPatronsFromGithub";
 import {
   CompressedProjectResources,
+  ProjectResources,
   WriteResourcesPatch,
 } from "shared/lib/resources/types";
 import { decompressProjectResources } from "shared/lib/resources/compression";
@@ -1379,16 +1380,18 @@ ipcMain.handle(
   "project:export",
   async (
     event,
-    compressedProject: CompressedProjectResources,
+    project: ProjectResources,
     engineFields: EngineFieldSchema[],
     sceneTypes: SceneTypeSchema[],
     exportType: ProjectExportType
   ) => {
+    console.time("project:export");
     const buildStartTime = Date.now();
 
-    const project = decompressProjectResources(compressedProject);
 
-    /*
+    console.log("GOT RESOURCES");
+    console.timeEnd("project:export");
+
     try {
       const projectRoot = Path.dirname(projectPath);
       const outputRoot = Path.normalize(`${getTmp()}/${buildUUID}`);
@@ -1458,7 +1461,6 @@ ipcMain.handle(
       }
       throw e;
     }
-    */
   }
 );
 

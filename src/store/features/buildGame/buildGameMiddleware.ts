@@ -10,7 +10,6 @@ import navigationActions from "store/features/navigation/navigationActions";
 
 const buildGameMiddleware: Middleware<Dispatch, RootState> =
   (store) => (next) => async (action) => {
-    /*
     if (actions.buildGame.match(action)) {
       const state = store.getState();
       const dispatch = store.dispatch.bind(store);
@@ -93,7 +92,7 @@ const buildGameMiddleware: Middleware<Dispatch, RootState> =
         dispatch(debuggerActions.setIsLogOpen(true));
       }
     }
-*/
+
     return next(action);
   };
 
