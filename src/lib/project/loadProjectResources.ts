@@ -12,7 +12,7 @@ import glob from "glob";
 import { promisify } from "util";
 import promiseLimit from "lib/helpers/promiseLimit";
 import groupBy from "lodash/groupBy";
-import type { Dictionary } from "lodash";
+import { identity, type Dictionary } from "lodash";
 import { defaultProjectSettings } from "consts";
 
 const globAsync = promisify(glob);
@@ -43,20 +43,29 @@ export const loadProjectResources = async (
   console.timeEnd("loadProjectData.loadProject globResources");
 
   console.time("loadProjectData.loadProject readResources2");
-  const resources = await promiseLimit(
+  const resources = (await promiseLimit(
     CONCURRENT_RESOURCE_LOAD_COUNT,
     projectResources.map((projectResourcePath) => async () => {
-      const resourceData = await fs.readJson(projectResourcePath);
-      return {
-        path: path
-          .relative(projectRoot, projectResourcePath)
-          .split(path.sep)
-          .join(path.posix.sep),
-        type: resourceData._resourceType,
-        data: resourceData,
-      };
+      try {
+        const resourceData = await fs.readJson(projectResourcePath);
+        return {
+          path: path
+            .relative(projectRoot, projectResourcePath)
+            .split(path.sep)
+            .join(path.posix.sep),
+          type: resourceData._resourceType,
+          data: resourceData,
+        };
+      } catch (e) {
+        console.error("Failed to load resource: " + projectResourcePath);
+        return undefined;
+      }
     })
-  );
+  )).filter(identity) as {
+    path: string;
+    type: any;
+    data: any;
+  }[];
   console.timeEnd("loadProjectData.loadProject readResources2");
 
   console.time("loadProjectData.loadProject build resourcesLookup");
