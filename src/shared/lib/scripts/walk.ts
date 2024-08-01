@@ -7,7 +7,6 @@ import {
   ActorScriptKey,
   CustomEventNormalized,
   SceneNormalized,
-  Scene,
   SceneScriptKey,
   ScriptEventNormalized,
   ScriptEvent,
@@ -17,6 +16,7 @@ import {
   triggerScriptKeys,
   sceneScriptKeys,
   CustomEvent,
+  Scene,
 } from "shared/lib/entities/entitiesTypes";
 
 //#region Script Events
