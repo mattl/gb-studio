@@ -34,7 +34,6 @@ import createProject, { CreateProjectInput } from "lib/project/createProject";
 import open from "open";
 import confirmEnableColorDialog from "lib/electron/dialog/confirmEnableColorDialog";
 import confirmDeleteCustomEvent from "lib/electron/dialog/confirmDeleteCustomEvent";
-import type { ProjectData } from "store/features/project/projectActions";
 import type { BuildOptions, RecentProjectData } from "renderer/lib/api/setup";
 import buildProject from "lib/compiler/buildProject";
 import copy from "lib/helpers/fsCopy";
@@ -114,11 +113,9 @@ import { fileExists } from "lib/helpers/fs/fileExists";
 import confirmDeleteAsset from "lib/electron/dialog/confirmDeleteAsset";
 import { getPatronsFromGithub } from "lib/credits/getPatronsFromGithub";
 import {
-  CompressedProjectResources,
   ProjectResources,
   WriteResourcesPatch,
 } from "shared/lib/resources/types";
-import { decompressProjectResources } from "shared/lib/resources/compression";
 import { loadProjectResourceChecksums } from "lib/project/loadResourceChecksums";
 
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -1220,14 +1217,8 @@ ipcMain.handle("project:get-resource-checksums", async (): Promise<
 
 ipcMain.handle(
   "project:build",
-  async (
-    event,
-    compressedProject: CompressedProjectResources,
-    options: BuildOptions
-  ) => {
+  async (event, project: ProjectResources, options: BuildOptions) => {
     cancelBuild = false;
-
-    const project = decompressProjectResources(compressedProject);
 
     const { exportBuild, buildType, sceneTypes } = options;
     const buildStartTime = Date.now();
@@ -1241,7 +1232,6 @@ ipcMain.handle(
     const colorOnly = project.settings.colorMode === "color";
     const gameFile = colorOnly ? "game.gbc" : "game.gb";
 
-    /*
     try {
       const compiledData = await buildProject(project, {
         ...options,
@@ -1338,7 +1328,6 @@ ipcMain.handle(
       }
       throw e;
     }
-      */
   }
 );
 
@@ -1387,7 +1376,6 @@ ipcMain.handle(
   ) => {
     console.time("project:export");
     const buildStartTime = Date.now();
-
 
     console.log("GOT RESOURCES");
     console.timeEnd("project:export");

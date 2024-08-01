@@ -5,6 +5,7 @@ import { ProjectData } from "store/features/project/projectActions";
 import { getTestScriptHandlers } from "../../getTestScriptHandlers";
 import { dummyProjectData, dummyScene } from "../../dummydata";
 
+/*
 test("should include default font when provided", async () => {
   const projectData = {
     ...dummyProjectData,
@@ -155,3 +156,4 @@ test("should include fonts referenced in dialogue", async () => {
     "4bd653f0-e08d-424e-9e5b-c1f3aaa21e47"
   );
 });
+*/

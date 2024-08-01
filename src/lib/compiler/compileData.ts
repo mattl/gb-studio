@@ -90,7 +90,6 @@ import { determineUsedAssets } from "./precompile/determineUsedAssets";
 import { compileSound } from "./sounds/compileSound";
 import { readFileToTilesData } from "lib/tiles/readFileToTiles";
 import l10n from "shared/lib/lang/l10n";
-import type { ProjectData } from "store/features/project/projectActions";
 import {
   AvatarData,
   BackgroundData,
@@ -190,7 +189,6 @@ export const EVENT_MSG_PRE_FONTS = "Preparing fonts...";
 export const EVENT_MSG_PRE_COMPLETE = "Preparation complete";
 export const EVENT_MSG_COMPILING_EVENTS = "Compiling events...";
 
-/*
 const ensureProjectAsset = async (
   relativePath: string,
   {
@@ -1181,7 +1179,7 @@ export const precompileScenes = (
 };
 
 const precompile = async (
-  projectData: ProjectData,
+  projectData: ProjectResources,
   projectRoot: string,
   scriptEventHandlers: ScriptEventHandlers,
   tmpPath: string,
@@ -1193,7 +1191,7 @@ const precompile = async (
     warnings: (msg: string) => void;
   }
 ) => {
-  const customEventsLookup = keyBy(projectData.customEvents, "id");
+  const customEventsLookup = keyBy(projectData.scripts, "id");
   const colorMode = projectData.settings.colorMode;
   const cgbOnly = colorMode === "color";
 
@@ -1249,7 +1247,7 @@ const precompile = async (
     statesOrder,
     stateReferences,
   } = await precompileSprites(
-    projectData.spriteSheets,
+    projectData.sprites,
     projectData.scenes,
     customEventsLookup,
     projectData.settings.defaultPlayerSprites,
@@ -1358,7 +1356,7 @@ const precompile = async (
 // #endregion
 
 const compile = async (
-  projectData: ProjectData,
+  projectData: ProjectResources,
   {
     projectRoot = "/tmp",
     scriptEventHandlers,
@@ -1408,7 +1406,7 @@ const compile = async (
   const isCGBOnly = projectData.settings.colorMode === "color";
   const isSGB = projectData.settings.sgbEnabled && !isCGBOnly;
   const precompiledEngineFields = keyBy(engineFields, "key");
-  const customEventsLookup = keyBy(projectData.customEvents, "id");
+  const customEventsLookup = keyBy(projectData.scripts, "id");
 
   // Add UI data
   output["frame_image.c"] = compileFrameImage(precompiled.frameTiles);
@@ -1429,7 +1427,7 @@ const compile = async (
   // Can maybe move some of the compilation into workers to prevent this
   await new Promise((resolve) => setTimeout(resolve, 20));
 
-  const variablesLookup = keyBy(projectData.variables, "id");
+  const variablesLookup = keyBy(projectData.variables.variables, "id");
   const variableAliasLookup = precompiled.usedVariables.reduce(
     (memo, variable) => {
       // Include variables referenced from GBVM
@@ -1533,7 +1531,7 @@ const compile = async (
           emotes: precompiled.usedEmotes,
           tilesets: precompiled.usedTilesets,
           backgrounds: precompiled.usedBackgrounds,
-          customEvents: projectData.customEvents,
+          customEvents: projectData.scripts,
           palettes: projectData.palettes,
           settings: projectData.settings,
           variablesLookup,
@@ -1999,7 +1997,7 @@ const compile = async (
     fonts: precompiled.usedFonts,
     avatarFonts,
     engineFields,
-    engineFieldValues: projectData.engineFieldValues,
+    engineFieldValues: projectData.engineFieldValues.engineFieldValues,
   });
   output[`data_bootstrap.h`] =
     `#ifndef DATA_PTRS_H\n#define DATA_PTRS_H\n\n` +
@@ -2052,9 +2050,10 @@ const compile = async (
         (engineField) => engineField.cType === "define" && !engineField.file
       )
       .map((engineField, defineIndex, defineFields) => {
-        const engineValue = projectData.engineFieldValues.find(
-          (v) => v.id === engineField.key
-        );
+        const engineValue =
+          projectData.engineFieldValues.engineFieldValues.find(
+            (v) => v.id === engineField.key
+          );
         const value =
           engineValue && engineValue.value !== undefined
             ? engineValue.value
@@ -2076,35 +2075,34 @@ const compile = async (
     variableMap,
   };
 };
-*/
 
-const compile = async (
-  projectData: ProjectResources,
-  {
-    projectRoot = "/tmp",
-    scriptEventHandlers,
-    engineFields = [],
-    sceneTypes = [],
-    tmpPath = "/tmp",
-    debugEnabled = false,
-    progress = (_msg: string) => {},
-    warnings = (_msg: string) => {},
-  }: {
-    projectRoot: string;
-    scriptEventHandlers: ScriptEventHandlers;
-    engineFields: EngineFieldSchema[];
-    sceneTypes: SceneTypeSchema[];
-    tmpPath: string;
-    debugEnabled?: boolean;
-    progress: (_msg: string) => void;
-    warnings: (_msg: string) => void;
-  }
-): Promise<{
-  files: Record<string, string>;
-  sceneMap: Record<string, SceneMapData>;
-  variableMap: Record<string, VariableMapData>;
-}> => {
-  return {} as any;
-};
+// const compile = async (
+//   projectData: ProjectResources,
+//   {
+//     projectRoot = "/tmp",
+//     scriptEventHandlers,
+//     engineFields = [],
+//     sceneTypes = [],
+//     tmpPath = "/tmp",
+//     debugEnabled = false,
+//     progress = (_msg: string) => {},
+//     warnings = (_msg: string) => {},
+//   }: {
+//     projectRoot: string;
+//     scriptEventHandlers: ScriptEventHandlers;
+//     engineFields: EngineFieldSchema[];
+//     sceneTypes: SceneTypeSchema[];
+//     tmpPath: string;
+//     debugEnabled?: boolean;
+//     progress: (_msg: string) => void;
+//     warnings: (_msg: string) => void;
+//   }
+// ): Promise<{
+//   files: Record<string, string>;
+//   sceneMap: Record<string, SceneMapData>;
+//   variableMap: Record<string, VariableMapData>;
+// }> => {
+//   return {} as any;
+// };
 
 export default compile;
