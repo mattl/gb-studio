@@ -1,4 +1,5 @@
 import migrateProject from "lib/project/migrateProject";
+import identity from "lodash/identity";
 import { BackgroundData, Scene } from "shared/lib/entities/entitiesTypes";
 import {
   compressSceneResource,
@@ -35,12 +36,16 @@ export const migrateLegacyProject = (
     return compressSceneResource(
       encodeScene({
         ...scene,
-        actors: scene.actors.map((actor, actorIndex) =>
-          encodeActor({ ...actor, _index: actorIndex })
-        ),
-        triggers: scene.triggers.map((trigger, triggerIndex) =>
-          encodeTrigger({ ...trigger, _index: triggerIndex })
-        ),
+        actors: scene.actors
+          .filter(identity)
+          .map((actor, actorIndex) =>
+            encodeActor({ ...actor, _index: actorIndex })
+          ),
+        triggers: scene.triggers
+          .filter(identity)
+          .map((trigger, triggerIndex) =>
+            encodeTrigger({ ...trigger, _index: triggerIndex })
+          ),
       })
     );
   };
@@ -53,17 +58,33 @@ export const migrateLegacyProject = (
   };
 
   return {
-    scenes: migratedProject.scenes.map(encodeScene),
-    scripts: migratedProject.customEvents.map(encodeResource("script")),
-    sprites: migratedProject.spriteSheets.map(encodeResource("sprite")),
-    backgrounds: migratedProject.backgrounds.map(encodeBackground),
-    emotes: migratedProject.emotes.map(encodeResource("emote")),
-    avatars: migratedProject.avatars.map(encodeResource("avatar")),
-    tilesets: migratedProject.tilesets.map(encodeResource("tileset")),
-    fonts: migratedProject.fonts.map(encodeResource("font")),
-    sounds: migratedProject.sounds.map(encodeResource("sound")),
-    music: migratedProject.music.map(encodeResource("music")),
-    palettes: migratedProject.palettes.map(encodeResource("palette")),
+    scenes: migratedProject.scenes.filter(identity).map(encodeScene),
+    scripts: migratedProject.customEvents
+      .filter(identity)
+      .map(encodeResource("script")),
+    sprites: migratedProject.spriteSheets
+      .filter(identity)
+      .map(encodeResource("sprite")),
+    backgrounds: migratedProject.backgrounds
+      .filter(identity)
+      .map(encodeBackground),
+    emotes: migratedProject.emotes
+      .filter(identity)
+      .map(encodeResource("emote")),
+    avatars: migratedProject.avatars
+      .filter(identity)
+      .map(encodeResource("avatar")),
+    tilesets: migratedProject.tilesets
+      .filter(identity)
+      .map(encodeResource("tileset")),
+    fonts: migratedProject.fonts.filter(identity).map(encodeResource("font")),
+    sounds: migratedProject.sounds
+      .filter(identity)
+      .map(encodeResource("sound")),
+    music: migratedProject.music.filter(identity).map(encodeResource("music")),
+    palettes: migratedProject.palettes
+      .filter(identity)
+      .map(encodeResource("palette")),
     variables: {
       _resourceType: "variables",
       variables: migratedProject.variables,
