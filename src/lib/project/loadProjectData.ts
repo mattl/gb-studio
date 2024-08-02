@@ -39,6 +39,8 @@ import {
 import { defaultPalettes } from "consts";
 import { migrateLegacyProject } from "./migrateLegacyProject";
 import { loadProjectResources } from "./loadProjectResources";
+import { readJson } from "lib/helpers/fs/readJson";
+import type { ProjectData } from "store/features/project/projectActions";
 
 export interface LoadProjectResult {
   resources: CompressedProjectResources;
@@ -81,11 +83,15 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   console.timeEnd("loadProjectData.loadProject scriptEventDefs");
 
   console.time("loadProjectData.loadProject readJson");
-  const originalJson = await fs.readJson(projectPath);
+  const originalJson = await readJson(projectPath);
   console.timeEnd("loadProjectData.loadProject readJson");
 
   const resources = !isProjectMetadataResource(originalJson)
-    ? migrateLegacyProject(originalJson, projectRoot, scriptEventDefs)
+    ? migrateLegacyProject(
+        originalJson as ProjectData,
+        projectRoot,
+        scriptEventDefs
+      )
     : await loadProjectResources(projectRoot, originalJson);
 
   console.time("loadProjectData.loadProject engineFields");
@@ -96,7 +102,8 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
   const sceneTypes = await loadSceneTypes(projectRoot);
   console.timeEnd("loadProjectData.loadProject sceneTypes");
 
-  const { _version: originalVersion, _release: originalRelease } = originalJson;
+  const { _version: originalVersion, _release: originalRelease } =
+    originalJson as any;
 
   const isMigrated =
     resources.metadata._version !== originalVersion ||
@@ -407,7 +414,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       variables: variablesResource,
       engineFieldValues: engineFieldValuesResource,
       settings: settingsResource,
-      metadata: originalJson,
+      metadata: originalJson as any,
     },
     modifiedSpriteIds,
     isMigrated,

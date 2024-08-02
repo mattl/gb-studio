@@ -394,7 +394,7 @@ export const migrateFrom120To200Actors = (
             actor.movementType === "static" &&
             actor.animate !== true
           ) {
-            animSpeed = null;
+            animSpeed = null as any;
           }
           return {
             ...actor,
@@ -903,7 +903,7 @@ const migrateFrom200r4To200r5Actors = (data: ProjectData): ProjectData => {
           return {
             ...actor,
             moveSpeed: fixMoveSpeed(actor.moveSpeed),
-            animSpeed: fixAnimSpeed(actor.animSpeed),
+            animSpeed: fixAnimSpeed(actor.animSpeed) as any,
           };
         }),
       };
