@@ -85,7 +85,7 @@ const saveProjectData = async (
     CONCURRENT_RESOURCE_SAVE_COUNT,
     writeBuffer.map(({ path, data }) => async () => {
       console.log("WRITE FILE", path);
-      await writeFileAndFlushAsync(Path.join(projectFolder, path), data);
+      await writeFileWithBackupAsync(Path.join(projectFolder, path), data);
     })
   );
   console.timeEnd("Flush Write Buffer");
