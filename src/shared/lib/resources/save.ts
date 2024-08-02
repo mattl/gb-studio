@@ -1,7 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import Path from "path";
 import {
+  ActorResource,
+  AvatarResource,
+  CompressedBackgroundResource,
   CompressedProjectResources,
+  CompressedSceneResource,
+  EmoteResource,
+  EngineFieldValuesResource,
+  FontResource,
+  MusicResource,
+  PaletteResource,
+  ScriptResource,
+  SettingsResource,
+  SoundResource,
+  SpriteResource,
+  TilesetResource,
+  TriggerResource,
+  VariablesResource,
   WriteFile,
 } from "shared/lib/resources/types";
 import {
@@ -14,6 +29,7 @@ import {
   getTriggerResourcePath,
 } from "shared/lib/resources/paths";
 import SparkMD5 from "spark-md5";
+import { omit } from "shared/types";
 
 export const encodeResource = <T extends Record<string, unknown>>(
   resourceType: string,
@@ -81,7 +97,7 @@ export const buildResourceExportBuffer = (
             actor,
             actorIndex
           );
-          writeResource(actorFilename, "actor", {
+          writeResource<ActorResource>(actorFilename, "actor", {
             ...actor,
             _index: actorIndex,
           });
@@ -99,7 +115,7 @@ export const buildResourceExportBuffer = (
             trigger,
             triggerIndex
           );
-          writeResource(triggerFilename, "trigger", {
+          writeResource<TriggerResource>(triggerFilename, "trigger", {
             ...trigger,
             _index: triggerIndex,
           });
@@ -108,105 +124,100 @@ export const buildResourceExportBuffer = (
       }
     }
 
-    writeResource(sceneFilename, "scene", {
-      ...scene,
-      actors: undefined,
-      triggers: undefined,
-      tileColors: undefined,
-    });
+    writeResource<CompressedSceneResource>(
+      sceneFilename,
+      "scene",
+      omit(scene, "actors", "triggers")
+    );
     sceneIndex++;
   }
   console.timeEnd("SAVING PROJECT : build scene resources");
 
   console.time("SAVING PROJECT : build background resources");
 
-  let backgroundIndex = 0;
   for (const background of projectResources.backgrounds) {
     const backgroundFilename = getResourceAssetPath(background);
-    writeResource(backgroundFilename, "background", background);
-    backgroundIndex++;
+    writeResource<CompressedBackgroundResource>(
+      backgroundFilename,
+      "background",
+      background
+    );
   }
   console.timeEnd("SAVING PROJECT : build background resources");
 
-  let spriteIndex = 0;
   for (const sprite of projectResources.sprites) {
     const spriteFilename = getResourceAssetPath(sprite);
-    writeResource(spriteFilename, "sprite", sprite);
-    spriteIndex++;
+    writeResource<SpriteResource>(spriteFilename, "sprite", sprite);
   }
 
   let paletteIndex = 0;
   for (const palette of projectResources.palettes) {
     const paletteFilename = getPaletteResourcePath(palette, paletteIndex);
-    writeResource(paletteFilename, "palette", palette);
+    writeResource<PaletteResource>(paletteFilename, "palette", palette);
     paletteIndex++;
   }
 
   let scriptIndex = 0;
   for (const script of projectResources.scripts) {
     const scriptFilename = getScriptResourcePath(script, scriptIndex);
-    writeResource(scriptFilename, "script", script);
+    writeResource<ScriptResource>(scriptFilename, "script", script);
     scriptIndex++;
   }
 
-  let songIndex = 0;
   for (const song of projectResources.music) {
     const songFilename = getResourceAssetPath(song);
-    writeResource(songFilename, "music", song);
-    songIndex++;
+    writeResource<MusicResource>(songFilename, "music", song);
   }
 
-  let soundIndex = 0;
   for (const sound of projectResources.sounds) {
     const soundFilename = getResourceAssetPath(sound);
-    writeResource(soundFilename, "sound", sound);
-    soundIndex++;
+    writeResource<SoundResource>(soundFilename, "sound", sound);
   }
 
-  let emoteIndex = 0;
   for (const emote of projectResources.emotes) {
     const emoteFilename = getResourceAssetPath(emote);
-    writeResource(emoteFilename, "emote", emote);
-    emoteIndex++;
+    writeResource<EmoteResource>(emoteFilename, "emote", emote);
   }
 
-  let avatarIndex = 0;
   for (const avatar of projectResources.avatars) {
     const avatarFilename = getResourceAssetPath(avatar);
-    writeResource(avatarFilename, "avatar", avatar);
-    avatarIndex++;
+    writeResource<AvatarResource>(avatarFilename, "avatar", avatar);
   }
 
-  let tilesetIndex = 0;
   for (const tileset of projectResources.tilesets) {
     const tilesetFilename = getResourceAssetPath(tileset);
-    writeResource(tilesetFilename, "tileset", tileset);
-    tilesetIndex++;
+    writeResource<TilesetResource>(tilesetFilename, "tileset", tileset);
   }
 
-  let fontIndex = 0;
   for (const font of projectResources.fonts) {
     const fontFilename = getResourceAssetPath(font);
-    writeResource(fontFilename, "font", font);
-    fontIndex++;
+    writeResource<FontResource>(fontFilename, "font", font);
   }
 
-  writeResource(settingsResFilename, "settings", {
+  writeResource<Partial<SettingsResource>>(settingsResFilename, "settings", {
     ...projectResources.settings,
     worldScrollX: undefined,
     worldScrollY: undefined,
     zoom: undefined,
   });
 
-  writeResource(userSettingsResFilename, "settings", {
-    worldScrollX: projectResources.settings.worldScrollX,
-    worldScrollY: projectResources.settings.worldScrollY,
-    zoom: projectResources.settings.zoom,
-  });
+  writeResource<Partial<SettingsResource>>(
+    userSettingsResFilename,
+    "settings",
+    {
+      worldScrollX: projectResources.settings.worldScrollX,
+      worldScrollY: projectResources.settings.worldScrollY,
+      zoom: projectResources.settings.zoom,
+    }
+  );
 
-  writeResource(variablesResFilename, "variables", projectResources.variables);
+  writeResource<VariablesResource>(
+    variablesResFilename,
+    "variables",
+    projectResources.variables
+  );
 
-  writeResource(
+  writeResource<EngineFieldValuesResource>(
     engineFieldValuesResFilename,
     "engineFieldValues",
     projectResources.engineFieldValues

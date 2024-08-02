@@ -76,3 +76,19 @@ export const ensurePromisedNumber = ensurePromisedTypeGenerator(isNumber);
 
 export const ensureMaybeString = ensureTypeGenerator(isMaybeString);
 export const ensureMaybeNumber = ensureTypeGenerator(isMaybeNumber);
+
+export const omit = <T, O extends keyof T>(
+  obj: T,
+  ...keys: O[]
+): Omit<T, O> => {
+  const ret = {} as {
+    [K in keyof typeof obj]: typeof obj[K];
+  };
+  let key: keyof typeof obj;
+  for (key in obj) {
+    if (!keys.includes(key as O)) {
+      ret[key] = obj[key];
+    }
+  }
+  return ret;
+};
