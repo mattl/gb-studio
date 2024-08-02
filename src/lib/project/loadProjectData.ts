@@ -414,7 +414,7 @@ const loadProject = async (projectPath: string): Promise<LoadProjectResult> => {
       variables: variablesResource,
       engineFieldValues: engineFieldValuesResource,
       settings: settingsResource,
-      metadata: originalJson as any,
+      metadata: resources.metadata,
     },
     modifiedSpriteIds,
     isMigrated,
