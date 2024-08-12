@@ -82,7 +82,7 @@ const makeBuild = async ({
   }
 
   // Populate /obj with cached data
-  await fetchCachedObjData(buildRoot, tmpPath, env);
+  // await fetchCachedObjData(buildRoot, tmpPath, env);
 
   // Compile Source Files
   const makeCommands = await getBuildCommands(buildRoot, {
@@ -104,7 +104,7 @@ const makeBuild = async ({
 
   // Build source files in parallel
   const childSet = new Set<ChildProcess>();
-  const concurrency = cpuCount;
+  const concurrency = 1;
   await Promise.all(
     Array(concurrency)
       .fill(makeCommands.entries())

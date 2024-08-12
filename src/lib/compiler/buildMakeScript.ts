@@ -130,6 +130,14 @@ export const getBuildCommands = async (
       ? `..\\_gbstools\\gbdk\\bin\\lcc`
       : `../_gbstools/gbdk/bin/lcc`;
 
+  const PWD = platform === "win32" ? "cd" : "pwd";
+  const ENV = platform === "win32" ? "set" : "env";
+
+  output.push({
+    label: `Confirming ENV`,
+    command: ENV,
+  });
+
   for (const file of buildFiles) {
     if (musicDriver === "huge" && file.indexOf("GBT_PLAYER") !== -1) {
       continue;
@@ -144,6 +152,7 @@ export const getBuildCommands = async (
 
     if (!(await pathExists(objFile))) {
       const buildArgs = [
+        `-v`,
         `-Iinclude`,
         `-Wa-Iinclude`,
         `-Wa-I../_gbstools/gbdk/lib/small/asxxxx`,
@@ -196,10 +205,12 @@ export const getBuildCommands = async (
       );
 
       output.push({
-        label: `${l10n("COMPILER_COMPILING")}: ${Path.relative(
-          buildRoot,
-          file
-        )}`,
+        label: `Confirming PWD`,
+        command: PWD,
+      });
+
+      output.push({
+        label: `${l10n("COMPILER_COMPILING")}: ${file}`,
         command: CC,
         args: buildArgs,
       });
