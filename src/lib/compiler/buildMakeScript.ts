@@ -132,6 +132,7 @@ export const getBuildCommands = async (
 
   const PWD = platform === "win32" ? "cd" : "pwd";
   const ENV = platform === "win32" ? "set" : "env";
+  const LS = platform === "win32" ? "dir" : "ls";
 
   output.push({
     label: `Confirming ENV`,
@@ -153,6 +154,8 @@ export const getBuildCommands = async (
     if (!(await pathExists(objFile))) {
       const buildArgs = [
         `-v`,
+        `-Wf-V`,
+        `-Wa-V`,
         `-Iinclude`,
         `-Wa-Iinclude`,
         `-Wa-I../_gbstools/gbdk/lib/small/asxxxx`,
@@ -207,6 +210,12 @@ export const getBuildCommands = async (
       output.push({
         label: `Confirming PWD`,
         command: PWD,
+      });
+
+      output.push({
+        label: `Confirming .c file exists`,
+        command: LS,
+        args: [Path.relative(buildRoot, file)]
       });
 
       output.push({

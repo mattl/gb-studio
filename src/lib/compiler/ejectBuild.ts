@@ -57,6 +57,7 @@ const ejectBuild = async ({
   await rmdir(outputRoot);
   await fs.ensureDir(outputRoot);
   progress("Copy default engine");
+  progress(corePath);
 
   await copy(corePath, outputRoot);
 
@@ -95,6 +96,15 @@ const ejectBuild = async ({
   } catch (e) {
     progress("Local engine not found, using default engine");
   }
+
+
+  const outputRootFiles = glob.sync(`${outputRoot}/**`);
+  
+  const engineStat = outputRootFiles.map((file:string) => {
+    const fileStat = fs.statSync(file);
+    return `EngineFile: ${file} -- SIZE [${fileStat.size}] -- PERM [${fileStat.mode & 0o777}] -- ${JSON.stringify(fileStat)}`
+  })
+  engineStat.forEach((line) => progress(line))
 
   progress("Looking for engine plugins in plugins/*/engine");
   const enginePlugins = glob.sync(`${pluginsPath}/*/engine`);
