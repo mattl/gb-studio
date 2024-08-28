@@ -2913,12 +2913,12 @@ extern void __mute_mask_${symbol};
 
     this._rpn() //
       .ref(this._localRef(actorRef, 1))
-      .int16((units === "tiles" ? 8 : 1) * 16)
-      .operator(".DIV")
+      .int8(units === "tiles" ? 0x7 : 0x4)
+      .operator(".SHR")
       .refSetVariable(variableX)
       .ref(this._localRef(actorRef, 2))
-      .int16((units === "tiles" ? 8 : 1) * 16)
-      .operator(".DIV")
+      .int8(units === "tiles" ? 0x7 : 0x4)
+      .operator(".SHR")
       .refSetVariable(variableY)
       .stop();
 
@@ -4319,7 +4319,7 @@ extern void __mute_mask_${symbol};
                 this._stackPush(variableAlias);
               } else {
                 // Arg union value is variable id
-                this._stackPushConst(
+                this._stackPushReference(
                   variableAlias,
                   `Variable ${variableArg.id}`
                 );
@@ -4566,11 +4566,10 @@ extern void __mute_mask_${symbol};
             if (isScriptValue(argValue)) {
               e.args[arg] = mapScriptValueLeafNodes(argValue, (val) => {
                 if (val.type === "variable") {
-                  const scriptArg = argLookup["variable"].get(val.value);
-                  if (scriptArg?.indirect) {
+                  if (isVariableCustomEvent(val.value)) {
                     return {
-                      type: "indirect",
-                      value: scriptArg.symbol,
+                      ...val,
+                      value: getArg("variable", val.value),
                     };
                   }
                 } else if (val.type === "property") {
@@ -4772,8 +4771,13 @@ extern void __mute_mask_${symbol};
 
   scenePopState = (fadeSpeed = 2) => {
     this._addComment("Pop Scene State");
-    this._setConstMemInt8("fade_frames_per_step", fadeSpeeds[fadeSpeed] ?? 0x3);
-    this._fadeOut(true);
+    if (fadeSpeed > 0) {
+      this._setConstMemInt8(
+        "fade_frames_per_step",
+        fadeSpeeds[fadeSpeed] ?? 0x3
+      );
+      this._fadeOut(true);
+    }
     this._setConstMemInt8("camera_settings", ".CAMERA_LOCK");
     this._scenePop();
     this._addNL();
@@ -4781,8 +4785,14 @@ extern void __mute_mask_${symbol};
 
   scenePopAllState = (fadeSpeed = 2) => {
     this._addComment("Pop All Scene State");
-    this._setConstMemInt8("fade_frames_per_step", fadeSpeeds[fadeSpeed] ?? 0x3);
-    this._fadeOut(true);
+    this._addComment("" + fadeSpeed);
+    if (fadeSpeed > 0) {
+      this._setConstMemInt8(
+        "fade_frames_per_step",
+        fadeSpeeds[fadeSpeed] ?? 0x3
+      );
+      this._fadeOut(true);
+    }
     this._setConstMemInt8("camera_settings", ".CAMERA_LOCK");
     this._scenePopAll();
     this._addNL();
@@ -6528,11 +6538,11 @@ extern void __mute_mask_${symbol};
     this._addComment(`If Actor At Position`);
 
     const [rpnOpsX, fetchOpsX] = precompileScriptValue(
-      optimiseScriptValue(scriptValueToSubpixels(valueX, units)),
+      optimiseScriptValue(valueX),
       "x"
     );
     const [rpnOpsY, fetchOpsY] = precompileScriptValue(
-      optimiseScriptValue(scriptValueToSubpixels(valueY, units)),
+      optimiseScriptValue(valueY),
       "y"
     );
 
@@ -6550,11 +6560,19 @@ extern void __mute_mask_${symbol};
 
     // X Value EQ
     rpn.ref(this._localRef(actorRef, 1));
+    // Convert to chosen units
+    rpn.int8(units === "tiles" ? 0x7 : 0x4);
+    rpn.operator(".SHR");
+    // Get value to compare X with
     this._performValueRPN(rpn, rpnOpsX, localsLookup);
     rpn.operator(".EQ");
 
     // Y Value EQ
     rpn.ref(this._localRef(actorRef, 2));
+    // Convert to chosen units
+    rpn.int8(units === "tiles" ? 0x7 : 0x4);
+    rpn.operator(".SHR");
+    // Get value to compare Y with
     this._performValueRPN(rpn, rpnOpsY, localsLookup);
     rpn.operator(".EQ");
 
