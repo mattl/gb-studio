@@ -1,7 +1,7 @@
 import Path from "path";
-import { fork, ChildProcess } from "child_process";
+import { Worker } from "worker_threads";
 import compileData from "./compileData";
-import { BuildOptions, BuildTaskCommand, BuildTaskResponse } from "./buildTask";
+import { BuildTaskResponse, BuildWorkerData } from "./buildWorker";
 import { getL10NData } from "shared/lib/lang/l10n";
 
 type BuilderRunnerResult = {
@@ -9,7 +9,7 @@ type BuilderRunnerResult = {
   result: ReturnType<typeof compileData>;
 };
 
-type BuildRunnerOptions = Omit<BuildOptions, "l10nData"> & {
+type BuildRunnerOptions = Omit<BuildWorkerData, "l10nData"> & {
   progress: (msg: string) => void;
   warnings: (msg: string) => void;
 };
@@ -19,24 +19,22 @@ export const buildRunner = ({
   warnings,
   ...options
 }: BuildRunnerOptions): BuilderRunnerResult => {
-  let buildTask: ChildProcess | undefined;
+  let worker: Worker | undefined;
   let cancelling = false;
 
   const compiledData = new Promise<Awaited<ReturnType<typeof compileData>>>(
     (resolve, reject) => {
-      const taskPath = Path.resolve(__dirname, "./buildTask.js");
-      buildTask = fork(taskPath);
-      const command: BuildTaskCommand = {
-        action: "build",
-        payload: {
-          ...options,
-          l10nData: getL10NData(),
-        },
+      const workerPath = Path.resolve(__dirname, "./buildWorker.js");
+      const workerData: BuildWorkerData = {
+        ...options,
+        l10nData: getL10NData(),
       };
-      buildTask.send(command);
 
-      // Listen for messages from the child process
-      buildTask.on("message", (message: BuildTaskResponse) => {
+      worker = new Worker(workerPath, {
+        workerData,
+      });
+
+      worker.on("message", (message: BuildTaskResponse) => {
         if (cancelling) {
           return;
         }
@@ -48,10 +46,10 @@ export const buildRunner = ({
           resolve(message.payload);
         }
       });
-
-      // Handle child process exit
-      buildTask.on("exit", (code) => {
-        buildTask = undefined;
+      worker.on("error", (error) => {
+        reject(error);
+      });
+      worker.on("exit", (code) => {
         if (code !== 0) {
           reject(code ?? 1);
         }
@@ -64,8 +62,8 @@ export const buildRunner = ({
       return;
     }
     cancelling = true;
-    if (buildTask) {
-      process.kill(buildTask.pid);
+    if (worker) {
+      worker.terminate();
     }
   };
 

@@ -20,7 +20,7 @@ module.exports = {
   },
   entry: {
     index: Path.resolve(__dirname, "./src/bin/gb-studio-cli.ts"),
-    buildTask: "./src/lib/compiler/buildTask.ts",
+    buildWorker: "./src/lib/compiler/buildWorker.ts",
   },
   output: {
     filename: (pathData) => {

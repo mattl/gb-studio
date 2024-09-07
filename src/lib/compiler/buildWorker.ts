@@ -1,3 +1,4 @@
+import { parentPort, workerData, isMainThread, threadId } from "worker_threads";
 import loadAllScriptEventHandlers from "lib/project/loadScriptEventHandlers";
 import type {
   EngineFieldSchema,
@@ -12,7 +13,7 @@ import makeBuild from "./makeBuild";
 
 export type BuildType = "rom" | "web" | "pocket";
 
-export type BuildOptions = {
+export type BuildWorkerData = {
   project: ProjectResources;
   buildType: BuildType;
   projectRoot: string;
@@ -25,26 +26,24 @@ export type BuildOptions = {
   l10nData: L10NLookup;
 };
 
-export type BuildTaskCommand = {
-  action: "build";
-  payload: BuildOptions;
-};
-
 export type BuildTaskResponse =
   | {
       action: "progress";
+      threadId: number;
       payload: {
         message: string;
       };
     }
   | {
       action: "warning";
+      threadId: number;
       payload: {
         message: string;
       };
     }
   | {
       action: "complete";
+      threadId: number;
       payload: Awaited<ReturnType<typeof compileData>>;
     };
 
@@ -58,7 +57,7 @@ const buildProject = async ({
   buildType,
   make,
   l10nData,
-}: BuildOptions) => {
+}: BuildWorkerData) => {
   // Initialise l10n
   setL10NData(l10nData);
 
@@ -113,6 +112,7 @@ const buildProject = async ({
 const progress = (message: string) => {
   send({
     action: "progress",
+    threadId,
     payload: {
       message,
     },
@@ -122,6 +122,7 @@ const progress = (message: string) => {
 const warnings = (message: string) => {
   send({
     action: "warning",
+    threadId,
     payload: {
       message,
     },
@@ -129,30 +130,20 @@ const warnings = (message: string) => {
 };
 
 const send = (msg: BuildTaskResponse) => {
-  return new Promise<void>((resolve, reject) => {
-    process.send?.(msg, (e: Error) => {
-      if (e) {
-        console.error(
-          "buildTask process failed to send message to parent process:",
-          e
-        );
-        reject(e);
-      }
-      resolve();
-    });
-  });
+  parentPort?.postMessage?.(msg);
 };
 
-// Listen for a message from the parent process
-process.on("message", async (message: BuildTaskCommand) => {
+const run = async () => {
   try {
-    if (message.action === "build") {
-      const res = await buildProject(message.payload);
-      await send({ action: "complete", payload: res });
-      process.exit(0);
-    }
+    const res = await buildProject(workerData);
+    send({ action: "complete", threadId, payload: res });
+    process.exit(0);
   } catch (e) {
     console.error("buildTask process terminated with error:", e);
     process.exit(1);
   }
-});
+};
+
+if (!isMainThread) {
+  run();
+}

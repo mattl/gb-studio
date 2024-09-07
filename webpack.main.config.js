@@ -57,7 +57,7 @@ module.exports = {
    */
   entry: {
     index: "./src/main.ts",
-    buildTask: "./src/lib/compiler/buildTask.ts",
+    buildWorker: "./src/lib/compiler/buildWorker.ts",
   },
   output: {
     path: __dirname + "/.webpack/main",

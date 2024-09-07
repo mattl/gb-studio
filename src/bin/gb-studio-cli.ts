@@ -11,7 +11,7 @@ import { loadSceneTypes } from "lib/project/sceneTypes";
 import loadProject from "lib/project/loadProjectData";
 import { decompressProjectResources } from "shared/lib/resources/compression";
 import { buildRunner } from "lib/compiler/buildRunner";
-import { BuildType } from "lib/compiler/buildTask";
+import { BuildType } from "lib/compiler/buildWorker";
 
 const rmdir = promisify(rimraf);
 
