@@ -48,8 +48,6 @@ import type {
   EngineFieldSchema,
   SceneTypeSchema,
 } from "store/features/engine/engineState";
-import compileData from "lib/compiler/compileData";
-import ejectBuild from "lib/compiler/ejectBuild";
 import type {
   Background,
   SpriteSheetData,
@@ -1307,7 +1305,6 @@ ipcMain.handle(
         projectRoot,
         sceneTypes,
         outputRoot,
-        scriptEventHandlers,
         tmpPath: getTmp(),
         debugEnabled: debuggerEnabled,
         progress,
@@ -1467,29 +1464,15 @@ ipcMain.handle(
         buildErr(message);
       };
 
-      const tmpPath = getTmp();
-
-      // Compile project data
-      const compiledData = await compileData(project, {
+      await buildProject(project, {
         projectRoot,
-        engineFields,
-        sceneTypes,
-        scriptEventHandlers,
-        tmpPath,
-        progress,
-        warnings,
-      });
-
-      // Export compiled data to a folder
-      await ejectBuild({
-        projectType: "gb",
-        projectRoot,
-        tmpPath,
-        projectData: project,
-        engineFields,
         sceneTypes,
         outputRoot,
-        compiledData,
+        tmpPath: getTmp(),
+        buildType: "rom",
+        engineFields,
+        debugEnabled: false,
+        make: false,
         progress,
         warnings,
       });
