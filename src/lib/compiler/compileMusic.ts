@@ -55,7 +55,9 @@ const compileModTrack = async (
   }: CompileModTrackOptions
 ): Promise<string> => {
   const env = { ...process.env };
-  env.PATH = [`${buildToolsPath}/mod2gbt`, env.PATH ?? env.Path].join(":");
+  env.PATH = [Path.join(buildToolsPath, "mod2gbt"), env.PATH ?? env.Path].join(
+    Path.delimiter
+  );
 
   JSON.stringify(env, null, 2)
     .split("\n")
