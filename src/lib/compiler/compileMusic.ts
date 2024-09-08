@@ -57,6 +57,10 @@ const compileModTrack = async (
   const env = { ...process.env };
   env.PATH = [`${buildToolsPath}/mod2gbt`, env.PATH ?? env.Path].join(":");
 
+  JSON.stringify(env, null, 2)
+    .split("\n")
+    .forEach((line) => progress(line));
+
   const command =
     process.platform === "win32"
       ? `"${buildToolsPath}\\mod2gbt\\mod2gbt.exe"`
@@ -92,6 +96,12 @@ const compileModTrack = async (
   };
 
   await new Promise<void>((resolve, reject) => {
+    progress("> OPTIONS");
+    JSON.stringify(options, null, 2)
+      .split("\n")
+      .forEach((line) => progress(line));
+    progress("-----");
+
     const child = childProcess.spawn(command, args, options);
 
     child.on("error", (err) => {
