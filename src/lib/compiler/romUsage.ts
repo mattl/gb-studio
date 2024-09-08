@@ -34,7 +34,7 @@ const romUsage = async ({
   warnings = (_msg) => {},
   progress = (_msg) => {},
 }: RomUsageOptions) => {
-  const env = Object.create(process.env);
+  const env = { ...process.env };
 
   const buildToolsPath = await ensureBuildTools(tmpPath);
   const buildToolsVersion = await fs.readFile(
@@ -42,7 +42,7 @@ const romUsage = async ({
     "utf8"
   );
 
-  env.PATH = [`${buildToolsPath}/gbdk/bin`, env.PATH].join(":");
+  env.PATH = [`${buildToolsPath}/gbdk/bin`, env.PATH ?? env.Path].join(":");
   env.GBDKDIR = `${buildToolsPath}/gbdk/`;
   env.GBS_TOOLS_VERSION = buildToolsVersion;
 

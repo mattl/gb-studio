@@ -54,8 +54,8 @@ const compileModTrack = async (
     warnings = (_msg) => {},
   }: CompileModTrackOptions
 ): Promise<string> => {
-  const env = Object.create(process.env);
-  env.PATH = [`${buildToolsPath}/mod2gbt`, env.PATH].join(":");
+  const env = { ...process.env };
+  env.PATH = [`${buildToolsPath}/mod2gbt`, env.PATH ?? env.Path].join(":");
 
   const command =
     process.platform === "win32"
