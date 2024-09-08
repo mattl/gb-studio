@@ -1,5 +1,6 @@
 import fs from "fs-extra";
 import os from "os";
+import Path from "path";
 import {
   buildLinkFile,
   buildLinkFlags,
@@ -41,7 +42,7 @@ const makeBuild = async ({
   warnings = (_msg) => {},
 }: MakeOptions) => {
   cancelling = false;
-  const env = {...process.env};
+  const env = { ...process.env };
   const { settings } = data;
   const colorEnabled = settings.colorMode !== "mono";
   const sgbEnabled = settings.sgbEnabled && settings.colorMode !== "color";
@@ -55,7 +56,11 @@ const makeBuild = async ({
     "utf8"
   );
 
-  env.PATH = [`${buildToolsPath}/gbdk/bin`, env.PATH ?? env.Path].join(":");
+  env.PATH = [
+    Path.join(buildToolsPath, "gbdk", "bin"),
+    env.PATH ?? env.Path,
+  ].join(Path.delimiter);
+
   env.GBDKDIR = `${buildToolsPath}/gbdk/`;
   env.GBS_TOOLS_VERSION = buildToolsVersion;
   env.TARGET_PLATFORM = targetPlatform;
