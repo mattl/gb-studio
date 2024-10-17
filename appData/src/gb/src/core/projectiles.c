@@ -149,7 +149,7 @@ void projectiles_render(void) NONBANKED {
     SWITCH_ROM(_save_bank);
 }
 
-void projectile_launch(UBYTE index, point16_t *pos, UBYTE angle, UBYTE flags) BANKED {
+void projectile_launch(UBYTE index, point16_t *pos, UBYTE angle) BANKED {
     projectile_t *projectile = projectiles_inactive_head;
     if (projectile) {
         memcpy(&projectile->def, &projectile_defs[index], sizeof(projectile_def_t));
@@ -167,8 +167,8 @@ void projectile_launch(UBYTE index, point16_t *pos, UBYTE angle, UBYTE flags) BA
         }
 
         // set projectile flags
-        projectile->anim_noloop = (flags & PROJECTILE_ANIM_NOLOOP);
-        projectile->strong = (flags & PROJECTILE_STRONG);
+        projectile->anim_noloop = projectile->def.anim_noloop;
+        projectile->strong = projectile->def.strong;
 
         // set animation
         projectile->frame = projectile->def.animations[dir].start;
