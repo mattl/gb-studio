@@ -99,6 +99,7 @@ jobs:
           APPLE_ID: ${{ secrets.MAC_NOTARIZE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.MAC_NOTARIZE_PWD }}
           APPLE_TEAM_ID: ${{ secrets.MAC_NOTARIZE_TEAM }}
+          DEBUG: "electron-notarize*"
         run: |
           export APPLE_ID=${APPLE_ID}
           export APPLE_ID_PASSWORD=${APPLE_ID_PASSWORD}
@@ -113,6 +114,7 @@ jobs:
           APPLE_ID: ${{ secrets.MAC_NOTARIZE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.MAC_NOTARIZE_PWD }}
           APPLE_TEAM_ID: ${{ secrets.MAC_NOTARIZE_TEAM }}
+          DEBUG: "electron-notarize*"
         run: |
           export APPLE_ID=${APPLE_ID}
           export APPLE_ID_PASSWORD=${APPLE_ID_PASSWORD}
