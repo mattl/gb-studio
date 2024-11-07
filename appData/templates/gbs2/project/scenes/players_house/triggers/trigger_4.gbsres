@@ -25,7 +25,7 @@
       "id": "63e9130c-73a6-45d9-9b11-356dc94688e4",
       "command": "EVENT_TEXT",
       "args": {
-        "text": "It has a VHS\nplayer built in!",
+        "text": "It has a VCR\nbuilt in!",
         "avatarId": ""
       }
     }
